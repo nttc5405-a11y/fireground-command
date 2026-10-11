@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>火場指揮情境訓練｜S001 夜間透天厝一樓機車起火</title>
+<style>
+:root{
+  --bg:#e7ebee;--panel:#ffffff;--ink:#16202a;--muted:#5b6672;--line:#cdd4db;--chip:#eef1f4;
+  --red:#c8102e;--amber:#e39b00;--blue:#1f6fb2;--ok:#23824f;--sel:#1f6fb2;
+  --sky:#c9d3dd;--ground:#8d8a84;--wall:#f1ede6;--wallline:#38404a;--street:#6d6b67;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1418;--panel:#182029;--ink:#e5eaef;--muted:#93a0ad;--line:#2c3742;--chip:#212b35;
+    --sky:#1a2531;--ground:#3a3834;--wall:#2a2f35;--wallline:#a9b3bd;--street:#2d2c2a;--sel:#5c9bff;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1418;--panel:#182029;--ink:#e5eaef;--muted:#93a0ad;--line:#2c3742;--chip:#212b35;
+  --sky:#1a2531;--ground:#3a3834;--wall:#2a2f35;--wallline:#a9b3bd;--street:#2d2c2a;--sel:#5c9bff;
+  color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:2px solid var(--ink);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.clock{font-weight:800;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.clock small{font-size:12px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
+.gauges{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted);align-items:center}
+.gauges b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.meter{display:inline-block;width:64px;height:8px;background:var(--chip);border:1px solid var(--line);vertical-align:middle;margin:0 4px}
+.meter i{display:block;height:100%;background:var(--red)}
+.ctl{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--chip);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer}
+.btn.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn.go{background:var(--red);color:#fff;border-color:var(--red);font-weight:700}
+
+main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;padding:12px;max-width:1300px;margin:0 auto}
+@media (max-width:880px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+.panel h2{font-size:14px;margin:0 0 8px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.panel h2 span{font-size:12px;font-weight:400;color:var(--muted)}
+.scenewrap{position:relative}
+svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
+.banner{position:absolute;left:8px;right:8px;top:8px;background:var(--red);color:#fff;font-weight:700;font-size:14px;padding:6px 10px;border-radius:3px;display:none}
+.banner.show{display:block}
+.flame{transform-box:fill-box;transform-origin:50% 100%;animation:flick .7s ease-in-out infinite}
+@keyframes flick{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.12)}}
+@media (prefers-reduced-motion:reduce){.flame{animation:none}}
+
+.feed{max-height:240px;overflow:auto;font-size:13.5px}
+.feed div{padding:5px 0;border-bottom:1px solid var(--chip);display:flex;gap:8px}
+.feed time{color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.feed .alert{color:var(--red);font-weight:700}
+.feed .good{color:var(--ok);font-weight:600}
+.feed .cmd{color:var(--muted)}
+.feed .radio span::before{content:"無線電｜";color:var(--blue);font-weight:700}
+
+.crewlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.crew{display:flex;gap:8px;align-items:center;border:2px solid var(--line);border-radius:4px;padding:6px 8px;cursor:pointer;background:var(--panel);min-height:54px}
+.crew.sel{border-color:var(--sel);background:color-mix(in srgb,var(--sel) 10%,var(--panel))}
+.crew.busy{background:color-mix(in srgb,var(--amber) 24%,var(--panel));border-color:var(--amber)}
+.crew.inside{background:color-mix(in srgb,var(--red) 24%,var(--panel));border-color:var(--red)}
+.crew.busy .cst{color:var(--ink);font-weight:600}
+.crew.gone{opacity:.45;cursor:default}
+.cav{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--panel);font-weight:800;font-size:13px;flex:none}
+.crew.cmd .cav{background:var(--red);color:#fff}
+.cinfo{min-width:0;flex:1;font-size:12.5px;line-height:1.3}
+.cinfo b{font-size:14px}
+.cst{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.air{height:5px;background:var(--chip);margin-top:4px;display:none;border:1px solid var(--line)}
+.air i{display:block;height:100%}
+.recall{font-size:12px;padding:3px 7px;border-radius:4px;border:1px solid var(--line);background:var(--panel);cursor:pointer;display:none;flex:none}
+
+.zone{margin-top:10px}
+.zone:first-child{margin-top:0}
+.zone h3{font-size:13px;margin:0 0 5px;font-weight:700;border-left:4px solid var(--ink);padding-left:6px}
+.zone.cz h3{border-color:var(--red)}
+.zone[hidden]{display:none}
+.ztabs{display:flex;gap:4px;overflow-x:auto;margin:12px 0 8px;border-bottom:2px solid var(--ink);scrollbar-width:none}
+.ztabs::-webkit-scrollbar{display:none}
+.ztab{flex:none;border:1px solid var(--line);border-bottom:none;background:var(--chip);padding:8px 12px;border-radius:4px 4px 0 0;cursor:pointer;font-size:14px;font-weight:700;white-space:nowrap;position:relative}
+.ztab.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.ztab .n{display:inline-block;min-width:20px;margin-left:5px;font-size:11.5px;padding:0 5px;border-radius:9px;background:var(--panel);color:var(--ink);text-align:center}
+.ztab.alert::after{content:"";position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:var(--red)}
+.tasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:6px}
+.task{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:7px 9px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.task:hover{border-color:var(--ink)}
+.task b{font-size:14px;font-weight:700}
+.task small{font-size:12px;color:var(--muted);line-height:1.35}
+.task .why{color:var(--amber);font-weight:600}
+.task.na{opacity:.55}
+.task.urgent{border:2px solid var(--red);background:color-mix(in srgb,var(--red) 8%,var(--panel))}
+.hint{font-size:13px;color:var(--muted);margin:0 0 8px}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 16px;border-radius:4px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:92vw}
+.toast.show{opacity:1}
+.overlay{position:fixed;inset:0;background:rgba(10,14,18,.55);display:none;z-index:20;overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px))}
+.overlay.show{display:block}
+.sheet{background:var(--panel);max-width:680px;margin:0 auto;border-radius:4px;padding:20px;border-top:6px solid var(--red)}
+.sheet h1{font-size:22px;margin:0 0 4px;line-height:1.3}
+.sheet h2{font-size:16px;margin:18px 0 6px}
+.sheet p{margin:6px 0}
+.sheet label{display:block;font-size:13px;font-weight:700;margin:10px 0 3px}
+.sheet select,.sheet input{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);font:inherit}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.ck{display:grid;grid-template-columns:28px 1fr;gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--chip)}
+.ck .ic{font-weight:800;font-size:16px;text-align:center}
+.ck .pass{color:var(--ok)}.ck .fail{color:var(--red)}.ck .na{color:var(--muted)}
+.ck small{grid-column:2;color:var(--muted);font-size:12.5px}
+.vt{width:100%;border-collapse:collapse;font-size:14px}
+.vt td{padding:6px 4px;border-bottom:1px solid var(--chip)}
+.tl{font-size:13px;max-height:300px;overflow:auto;border:1px solid var(--line);padding:4px 8px}
+.tl div{padding:3px 0}
+.tl time{color:var(--muted);margin-right:8px;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="clock" id="clock">T+00:00<small id="modeTag"></small></div>
+  <div class="gauges" id="gauges"></div>
+  <div class="ctl" id="ctl">
+    <button class="btn" id="bPause" type="button">暫停</button>
+    <button class="btn" data-sp="1" type="button">1×</button>
+    <button class="btn" data-sp="2" type="button">2×</button>
+    <button class="btn" data-sp="4" type="button">4×</button>
+    <button class="btn" id="bEnd" type="button">結束演練</button>
+  </div>
+</header>
+
+<main>
+  <div class="col">
+    <section class="panel">
+      <h2>現場剖面圖 <span>左：A面巷道 ／ 右：C面防火巷</span></h2>
+      <div class="scenewrap">
+        <svg class="scene" id="scene" viewBox="0 0 420 300" role="img" aria-label="透天厝剖面與現場部署"></svg>
+        <div class="banner" id="banner"></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>現場紀錄 <span>最新在上</span></h2>
+      <div class="feed" id="feed"></div>
+    </section>
+  </div>
+  <div class="col">
+    <section class="panel">
+      <h2>人員 <span>先點人再點任務｜黃：派遣中　紅：入室</span></h2>
+      <div class="crewlist" id="crew"></div>
+    </section>
+    <section class="panel">
+      <h2>任務</h2>
+      <div id="tasks"></div>
+    </section>
+  </div>
+</main>
+
+<div class="overlay show" id="start">
+  <div class="sheet">
+    <h1>S001 夜間透天厝一樓機車起火</h1>
+    <p id="briefTxt"></p>
+    <p>你是第一梯次帶隊官。到場後時間就開始流動：火勢會自己長大，受困者的狀況會惡化，所有決定都會被記錄下來，結束後產生事後檢討（AAR）。</p>
+    <p>操作方式：先點選一位或多位待命人員，再點任務。灰色任務點下去會告訴你為什麼現在不能做。指揮類動作（初期報告、請求增援、點名）不需要選人。</p>
+    <label for="optName">姓名</label>
+    <input id="optName" autocomplete="name" placeholder="例：王小明">
+    <label for="optUnit">單位</label>
+    <input id="optUnit" placeholder="例：成功分隊">
+    <label for="optCrew">第一梯次出勤人數（含帶隊官）</label>
+    <select id="optCrew"><option value="4">4 人</option><option value="3">3 人</option></select>
+    <label for="optMode">模式</label>
+    <select id="optMode"><option value="practice">練習：可暫停、可加速</option><option value="exam">考核：不可暫停</option></select>
+    <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="report">
+  <div class="sheet">
+    <h1>初期報告</h1>
+    <p class="hint">時間持續進行中。依你目前掌握的資訊回報，不確定的不要說成確定。</p>
+    <label for="rBld">建物型態</label>
+    <select id="rBld"><option value="">請選擇</option><option>透天厝3樓＋頂加</option><option>公寓大樓</option><option>鐵皮工廠</option></select>
+    <label for="rFloor">起火樓層</label>
+    <select id="rFloor"><option value="">請選擇</option><option>1樓</option><option>2樓</option><option>3樓</option><option>不明</option></select>
+    <label for="rCond">火煙狀況</label>
+    <select id="rCond"><option value="">請選擇</option><option>濃煙、未見明火</option><option>可見火光</option><option>全面燃燒</option></select>
+    <label for="rVict">受困者</label>
+    <select id="rVict"><option value="">請選擇</option><option>確認受困（含位置）</option><option>疑似有人受困</option><option>無人受困</option><option>不明</option></select>
+    <label for="rMode">戰術模式</label>
+    <select id="rMode"><option value="">請選擇</option><option>攻擊（室內）</option><option>過渡（先外後內）</option><option>防禦（外部）</option></select>
+    <label for="rCp">指揮站</label>
+    <select id="rCp"><option value="">請選擇</option><option>A面1號車旁</option><option>未設立</option></select>
+    <label for="rReq">增援</label>
+    <select id="rReq"><option value="no">暫不請求</option><option value="yes">請求第二梯次增援</option></select>
+    <div class="row">
+      <button class="btn go" id="bSendReport" type="button">發送報告</button>
+      <button class="btn" id="bCancelReport" type="button">先不報</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="aar"><div class="sheet" id="aarBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 劇本參數（可依轄區實況調整） ===== */
+const CFG = {
+  id:'S001', title:'夜間透天厝一樓機車起火',
+  brief:'凌晨 02:10，受理報案：三層樓透天厝（含頂樓加蓋）一樓冒出濃煙。第一梯次出動水箱車 2 輛、救護車 1 輛。增援單位距離遠，請求後約 8 分鐘到場。',
+  timeLimit:1200,                 // 演練上限（秒）
+  fire:{F0:38, base:0.06, shutterMul:3, controlledMul:1.5, backMul:1.5, ventMul:1.4, interior:0.42, exterior:0.25, warn:75},
+  smoke:{St0:45, C20:35, C30:30},
+  water:{flow:6, tank1:2000, tank2:2000, reserve:8000}, // 公升；1.5吋線約 360 L/min
+  air:900, airWarn:300,           // 空氣瓶可作業秒數、低壓警告
+  eta:480,                        // 增援到場時間（秒）
+  gasUrl:'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec',                      // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
+  sonAt:100, sonWindow:35,        // 關係人衝入事件
+  victims:[
+    {id:'kid', name:'孫子（10歲）', room:'3F前側（房門關閉）', hp:100},
+    {id:'gma', name:'阿嬤（78歲）', room:'3F後側（房門開啟）', hp:80},
+  ],
+};
+
+/* ===== 狀態 ===== */
+const $ = s => document.querySelector(s);
+let S = null, timer = null, toastT = null, curZone = 'A面';
+const selected = new Set();
+const fmt = t => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;
+
+function newState(n, mode){
+  const base = [['帶隊官','帶',true],['隊員甲','甲'],['隊員乙','乙'],['隊員丙','丙']].slice(0,n);
+  return {
+    t:0, n, mode, runId:Date.now().toString(36)+Math.random().toString(36).slice(2,6), tester:{name:'',unit:''}, sent:false, speed:1, paused:false, over:false, endReason:'',
+    F:CFG.fire.F0, St:CFG.smoke.St0, C2:CFG.smoke.C20, C3:CFG.smoke.C30,
+    shutter:false, back:false, ladder:false, bars:false, line:false, hydrant:false, ambGone:false,
+    tank1:CFG.water.tank1, tank2:CFG.water.tank2, attackOn:false,
+    know:{A:false, C:false, interview:false},
+    son:'calm', sonDeadline:0, warned:{}, banner:null,
+    victims:CFG.victims.map(v=>({...v, status:'trapped', known:false})),
+    crew:base.map((c,i)=>({id:'c'+i, name:c[0], ab:c[1], cmd:!!c[2], task:null, inside:false, air:CFG.air, gone:false, note:''})),
+    active:[], seq:0,
+    reinf:{req:null, arrived:false},
+    ck:{sizeA:null, report:null, reportEval:null, interview:null, reinforce:null, shutter:null, waterAtShutter:null,
+        ventBeforeWater:null, tankDry:false, cmdBusy:0, minOut:null, rit:null, par:[], flashover:null, mayday:null,
+        transportSolo:false, firstWater:null, knockdown:null, out:null},
+    log:[]
+  };
+}
+const crewById = id => S.crew.find(c=>c.id===id);
+const actOf = id => S.active.filter(a=>a.def.id===id);
+const has = id => actOf(id).length>0;
+const V = id => S.victims.find(v=>v.id===id);
+const waterSrc = () => S.hydrant || S.tank1>0;
+const waterReady = () => S.line && has('pump') && waterSrc();
+const names = ids => ids.map(i=>crewById(i).name).join('、');
+
+function log(msg, type='info'){
+  S.log.unshift({t:S.t, msg, type});
+  if(type==='alert') S.banner = {msg, until:S.t+8};
+  renderFeed();
+}
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),2400);}
+
+function gotInfo(){
+  if(S.know.interview) return;
+  S.know.interview=true; S.ck.interview=S.t;
+  V('kid').known=true; V('gma').known=true;
+  if(S.son!=='entered') S.son='handled';
+  log('關係人：「我媽睡三樓後面那間，我兒子在三樓前面房間！他房門平常會關……」','radio');
+}
+function rescue(v, how){
+  v.known=true; v.status='out'; v.outAt=S.t;
+  log(`${how}救出${v.name}，移至救護車旁（生命徵象：${hpTxt(v.hp)}）`,'good');
+}
+const hpTxt = h => h>60?'穩定':h>30?'微弱':'危急';
+
+/* ===== 任務定義 ===== */
+const TASKS = [
+  {id:'sizeA', zone:'A面', name:'A面環場評估', min:1,max:1, dur:20, desc:'看建物、火煙、進入點',
+   avail:()=>S.know.A?'已完成':true,
+   done:()=>{S.know.A=true;S.ck.sizeA=S.t;
+     log('A面評估：三層透天＋頂加，一樓鐵捲門緊閉、門縫竄濃煙；二、三樓窗戶冒煙；三樓前窗有鐵窗。巷寬約4公尺，雲梯車進不來。');}},
+  {id:'interview', zone:'A面', name:'詢問關係人', min:1,max:1, dur:30, desc:'確認屋內有誰、在哪裡',
+   avail:()=>S.know.interview?'已完成':S.son==='entered'?'關係人已衝入火場':true, done:gotInfo},
+  {id:'stopSon', zone:'A面', name:'攔阻並安撫關係人', min:1,max:1, dur:15, desc:'關係人要衝進火場',
+   hidden:()=>!['agitated','stopping'].includes(S.son), urgent:true,
+   avail:()=>S.son==='agitated'?true:'目前無此狀況',
+   start:()=>{S.son='stopping'}, done:()=>{S.son='handled';gotInfo();}},
+  {id:'forceShutter', zone:'A面', name:'破壞鐵捲門', min:2,max:2, dur:90, desc:'開門等於給火氧氣',
+   avail:()=>!S.know.A?'需先完成A面評估':S.shutter?'已開啟':true,
+   done:()=>{S.shutter=true;S.ck.shutter=S.t;S.ck.waterAtShutter=waterReady();
+     log(S.ck.waterAtShutter?'鐵捲門開啟，水線已充水待命。':'鐵捲門開啟，濃煙湧出，水線尚未就緒！', S.ck.waterAtShutter?'info':'alert');}},
+  {id:'doorCtl', zone:'A面', name:'控制鐵捲門開口', min:1,max:1, dur:null, desc:'持續：半掩開口，減少進氣',
+   avail:()=>!S.shutter?'鐵捲門未開':has('doorCtl')?'已有人負責':true},
+  {id:'extAttack', zone:'A面', name:'門口過渡攻擊', min:1,max:2, dur:null, desc:'持續：不入室，由開口射水',
+   avail:()=>!S.shutter?'鐵捲門未開':!S.line?'水線未佈設':!has('pump')?'無人操作泵浦':!waterSrc()?'1號車無水':true},
+  {id:'ladder', zone:'A面', name:'架三節梯至3樓前窗', min:2,max:2, dur:90, desc:'',
+   avail:()=>!S.know.A?'需先完成A面評估':S.ladder?'已架設':true,
+   done:()=>{S.ladder=true;log('三節梯已架至三樓前窗。');}},
+  {id:'cutBars', zone:'A面', name:'破壞3樓前窗鐵窗', min:1,max:2, dur:a=>a.crew.length>=2?80:120, desc:'1人120秒／2人80秒；破窗即形成排煙口',
+   avail:()=>!S.ladder?'需先架梯':S.bars?'已破壞':true,
+   done:()=>{S.bars=true;const noW=!S.attackOn;S.ck.ventBeforeWater=noW;
+     log(noW?'三樓鐵窗與玻璃已破壞。火點尚未射水，煙火開始往三樓窗口竄！':'三樓鐵窗與玻璃已破壞，配合射水排煙。', noW?'alert':'info');}},
+  {id:'ladderRescue', zone:'A面', name:'經窗口進入3樓前側搜救', min:2,max:2, dur:75, idlh:true, desc:'',
+   avail:()=>!S.bars?'需先破壞鐵窗':true,
+   done:()=>{const k=V('kid');if(k.status==='trapped')rescue(k,'經窗口');else log('3樓前側房間搜索完畢，無其他受困者。');}},
+  {id:'rit', zone:'A面', name:'成立RIT待命', min:2,max:2, dur:null, desc:'持續：快速救援小組',
+   avail:()=>has('rit')?'已成立':true,
+   start:()=>{if(S.ck.rit==null)S.ck.rit=S.t;log('RIT 成立，於A面待命。','good');}},
+
+  {id:'pump', zone:'車輛／水源', name:'操作1號車泵浦', min:1,max:1, dur:null, desc:'持續：水線要出水必須有人',
+   avail:()=>has('pump')?'已有人操作':true},
+  {id:'layLine', zone:'車輛／水源', name:'佈設1.5吋水線', min:1,max:2, dur:a=>a.crew.length>=2?50:90, desc:'1人90秒／2人50秒',
+   avail:()=>S.line?'已佈設':true, done:()=>{S.line=true;log('1.5吋水線佈設完成，置於鐵捲門前。');}},
+  {id:'hydrant', zone:'車輛／水源', name:'接消防栓供水（80m）', min:1,max:2, dur:a=>a.crew.length>=2?100:150, desc:'1人150秒／2人100秒',
+   avail:()=>S.hydrant?'已建立':true, done:()=>{S.hydrant=true;log('消防栓中繼完成，1號車持續供水。','good');}},
+  {id:'transfer', zone:'車輛／水源', name:'2號車水量轉入1號車', min:1,max:1, dur:60, desc:'',
+   avail:()=>S.hydrant?'已有消防栓供水':S.tank2<=0?'2號車已無水':true,
+   done:()=>{S.tank1+=S.tank2;log(`轉入 ${S.tank2} 公升至1號車。`);S.tank2=0;}},
+
+  {id:'sizeC', zone:'C面', name:'繞至C面查看', min:1,max:1, dur:75, desc:'B、D面與鄰房相連，需繞路',
+   avail:()=>S.know.C?'已完成':true,
+   done:()=>{S.know.C=true;log('C面回報：防火巷約1公尺寬，一樓廚房後門為鐵門上鎖；三樓後窗冒濃煙，無法架梯。','radio');}},
+  {id:'forceBack', zone:'C面', name:'破壞後門', min:1,max:2, dur:60, desc:'第二進入點，也會形成對流',
+   avail:()=>!S.know.C?'需先完成C面查看':S.back?'已開啟':true,
+   done:()=>{S.back=true;log('後門已破壞，空氣由後方灌入一樓。','alert');}},
+
+  {id:'intAttack', zone:'室內', name:'室內攻擊', min:2,max:2, dur:null, idlh:true, desc:'持續：入室直擊火點，壓制最快',
+   avail:()=>!S.shutter?'鐵捲門未開':!S.line?'水線未佈設':!has('pump')?'無人操作泵浦':!waterSrc()?'1號車無水':S.F>=95?'一樓已全面燃燒，無法入室':true},
+  {id:'search', zone:'室內', name:'上樓搜索救援', min:2,max:2, idlh:true, desc:'每趟帶出1人；問過關係人會快很多',
+   dur:()=>S.victims.some(v=>v.id==='son'&&v.status==='trapped')?60:(S.know.interview?150:240),
+   avail:()=>{
+     if(!S.shutter&&!S.back) return '尚無進入點';
+     if(S.F>=90) return '一樓火勢過大，無法通過';
+     if(S.F>=55&&!has('intAttack')&&!has('extAttack')) return '一樓火勢大，需有水線掩護';
+     return true;},
+   done:()=>{
+     const son=S.victims.find(v=>v.id==='son'&&v.status==='trapped');
+     const t=son||S.victims.filter(v=>v.status==='trapped').sort((a,b)=>a.hp-b.hp)[0];
+     if(t) rescue(t,'室內搜索'); else log('室內搜索完畢，未發現其他受困者。');}},
+
+  {id:'care', zone:'救護', name:'傷患照護', min:1,max:1, dur:null, desc:'持續：照護已救出的傷患',
+   avail:()=>!S.victims.some(v=>v.status==='out')?'尚無救出傷患':has('care')?'已有人照護':true},
+  {id:'transport', zone:'救護', name:'救護車後送', min:1,max:2, dur:10, desc:'後送人員與救護車離開現場',
+   avail:()=>S.ambGone?'救護車已離開':!S.victims.some(v=>v.status==='out')?'尚無救出傷患':true,
+   done:a=>{S.ambGone=true;if(a.crew.length===1)S.ck.transportSolo=true;
+     const out=S.victims.filter(v=>v.status==='out');out.forEach(v=>v.status='transported');
+     a.crew.forEach(id=>{const c=crewById(id);c.gone=true;c.note='隨車後送';});
+     log(`救護車後送 ${out.map(v=>v.name).join('、')}，${names(a.crew)}隨車離開。`,'radio');}},
+];
+const ZONES=['A面','車輛／水源','C面','室內','救護'];
+
+/* ===== 指令 ===== */
+function clickTask(t){
+  if(S.over) return;
+  const r=t.avail(); if(r!==true){toast(r);return;}
+  const ids=[...selected].filter(id=>{const c=crewById(id);return c&&!c.task&&!c.gone;});
+  if(!ids.length){toast('先點選待命人員，再點任務');return;}
+  if(ids.length<t.min){toast(`「${t.name}」需要 ${t.min} 人`);return;}
+  if(ids.length>t.max){toast(`「${t.name}」最多 ${t.max} 人`);return;}
+  const a={key:++S.seq, def:t, crew:ids, start:S.t};
+  a.total = t.dur==null?null:(typeof t.dur==='function'?t.dur(a):t.dur); a.left=a.total;
+  S.active.push(a);
+  ids.forEach(id=>{const c=crewById(id);c.task=a.key;c.inside=!!t.idlh;});
+  if(t.start) t.start(a);
+  log(`${names(ids)}：${t.name}`,'cmd');
+  selected.clear(); render();
+}
+function removeActive(a){
+  S.active=S.active.filter(x=>x!==a);
+  a.crew.forEach(id=>{const c=crewById(id);if(c){c.task=null;c.inside=false;}});
+}
+function recallCrew(id){
+  const c=crewById(id); const a=S.active.find(x=>x.key===c.task); if(!a) return;
+  removeActive(a); if(a.def.id==='stopSon'&&S.son==='stopping') S.son='agitated';
+  log(`${a.def.name}中止，${names(a.crew)}撤回待命`,'cmd'); render();
+}
+function toggleSel(id){
+  const c=crewById(id); if(S.over||c.gone) return;
+  if(c.task){toast('執行任務中，要改派請先按「撤回」');return;}
+  selected.has(id)?selected.delete(id):selected.add(id); renderCrew();
+}
+function reqReinf(){
+  if(S.over) return;
+  if(S.reinf.req!=null){toast('已請求增援');return;}
+  S.reinf.req=S.t; S.ck.reinforce=S.t;
+  log('帶隊官：請求第二梯次增援。指揮中心：收到，預估 8 分鐘到場。','radio'); render();
+}
+function doPar(){
+  if(S.over) return;
+  const on=S.crew.filter(c=>!c.gone), ins=on.filter(c=>c.inside);
+  S.ck.par.push(S.t);
+  log(`PAR 點名：場內 ${ins.length} 人、場外 ${on.length-ins.length} 人，全員回應。`,'radio');
+}
+function openReport(){
+  if(S.over) return;
+  if(S.ck.report!=null){toast('初期報告已發送');return;}
+  $('#report').classList.add('show');
+}
+function sendReport(){
+  const d={bld:$('#rBld').value,floor:$('#rFloor').value,cond:$('#rCond').value,vict:$('#rVict').value,mode:$('#rMode').value,cp:$('#rCp').value};
+  const errs=[], missing=Object.keys(d).filter(k=>!d[k]);
+  if(d.bld&&d.bld!=='透天厝3樓＋頂加') errs.push('建物型態錯誤');
+  if(d.floor&&d.floor!=='1樓') errs.push(S.know.A?'起火樓層錯誤':'未評估即回報樓層');
+  if(d.cond==='全面燃燒') errs.push('火煙狀況誇大');
+  const knows=S.know.interview||V('kid').known;
+  if(knows&&d.vict&&d.vict!=='確認受困（含位置）') errs.push('已掌握受困者卻未回報');
+  if(!knows&&d.vict==='確認受困（含位置）') errs.push('受困者尚未確認就回報確認');
+  if(!knows&&d.vict==='無人受困') errs.push('未查證就排除受困者');
+  if(d.cp==='未設立') errs.push('未設立指揮站');
+  S.ck.report=S.t; S.ck.reportEval={d,errs,missing};
+  log(`初期報告：${d.bld||'—'}，${d.floor||'—'}起火，${d.cond||'—'}；受困者${d.vict||'—'}；採${d.mode||'—'}；指揮站${d.cp||'—'}。`,'radio');
+  if($('#rReq').value==='yes') reqReinf();
+  $('#report').classList.remove('show'); render();
+}
+
+function mayday(reason, ids){
+  if(S.ck.mayday) return;
+  const rit=has('rit');
+  S.ck.mayday={t:S.t, reason, rit};
+  log(`MAYDAY！MAYDAY！${reason}`,'alert');
+  if(rit){
+    [...new Set(S.active.filter(a=>a.crew.some(i=>ids.includes(i))))].forEach(removeActive);
+    ids.forEach(id=>{const c=crewById(id);c.gone=true;c.note='受傷送醫';});
+    log('RIT 立即進入，受困隊員已救出送醫。','good');
+  } else endGame(`MAYDAY：${reason}，現場沒有 RIT 可以立即救援`);
+}
+
+/* ===== 每秒推進 ===== */
+function cond(v){
+  if(v.id==='kid') return S.C3*((S.bars&&!S.attackOn)?1.0:0.65);
+  if(v.id==='gma') return S.C3;
+  if(v.id==='son') return Math.min(100,S.F*1.1);
+  return S.C3;
+}
+function tick(){
+  if(!S||S.over||S.paused) return;
+  S.t++;
+  const f=CFG.fire;
+
+  for(const a of [...S.active]){
+    if(a.total!=null){a.left--; if(a.left<=0){removeActive(a); if(a.def.done) a.def.done(a); if(S.over) return;}}
+  }
+
+  // 射水與用水
+  let knock=0; S.attackOn=false;
+  for(const a of S.active){
+    if(a.def.id!=='intAttack'&&a.def.id!=='extAttack') continue;
+    if(!waterReady()) continue;
+    S.attackOn=true;
+    knock += a.def.id==='intAttack'?f.interior:f.exterior*(a.crew.length>=2?1:0.7);
+    if(!S.hydrant){
+      S.tank1-=CFG.water.flow;
+      if(S.tank1<=0){S.tank1=0; if(!S.warned.dry){S.warned.dry=1;S.ck.tankDry=true;log('1號車水箱見底，水線斷水！','alert');}}
+    }
+  }
+  if(S.attackOn&&S.ck.firstWater==null) S.ck.firstWater=S.t;
+  if(!S.hydrant&&S.tank1>0&&S.tank1<=600&&!S.warned.low){S.warned.low=1;log('1號車水量剩不到 600 公升（約 1.5 分鐘）。','alert');}
+
+  // 火勢
+  let mul=1;
+  if(S.shutter) mul*=has('doorCtl')?f.controlledMul:f.shutterMul;
+  if(S.back) mul*=f.backMul;
+  if(S.bars&&!S.attackOn) mul*=f.ventMul;
+  if(S.F>0&&S.F<100) S.F+=f.base*mul;
+  S.F=Math.max(0,Math.min(100,S.F-knock));
+
+  // 煙層
+  const tgt=S.F*(S.shutter?0.85:1)*(S.back?0.9:1);
+  S.St+=(tgt-S.St)*0.015;
+  S.C2+=(S.St*0.85-S.C2)*0.01;
+  let t3=S.St; if(S.bars) t3*=(S.attackOn||S.F<30)?0.55:1.05;
+  S.C3+=(t3-S.C3)*0.008;
+
+  // 火況事件
+  if(S.F>=f.warn&&!S.warned.fw&&S.ck.flashover==null){S.warned.fw=1;log('一樓出現閃燃徵兆：煙層下沉、熱氣變強、天花板有滾燃。','alert');}
+  if(S.F>=100&&S.ck.flashover==null){
+    S.ck.flashover=S.t; log('一樓閃燃！','alert');
+    const ins=S.active.filter(a=>a.def.id==='intAttack'||a.def.id==='search');
+    if(ins.length){const ids=ins.flatMap(a=>a.crew);mayday(`一樓閃燃，${names(ids)}受困室內`,ids);if(S.over)return;}
+  }
+  if(S.F<15&&S.ck.knockdown==null&&S.ck.firstWater!=null){S.ck.knockdown=S.t;log('火勢已獲控制。','good');}
+  if(S.F<=0&&S.ck.out==null){S.ck.out=S.t;log('火勢撲滅，進入殘火處理。','good');}
+
+  // 受困者
+  for(const v of S.victims){
+    if(v.status==='trapped'){
+      v.hp-=Math.max(0,cond(v)-30)*(v.id==='son'?0.03:0.015);
+      if(v.hp<=0){v.hp=0;v.status='dead';v.deadAt=S.t;}
+    } else if(v.status==='out'){
+      if(has('care')) v.hp=Math.min(100,v.hp+0.02);
+      else {v.hp-=0.03; if(v.hp<=0){v.hp=0;v.status='dead';v.deadAt=S.t;log(`${v.name}救出後無人照護，傷重。`,'alert');}}
+    }
+  }
+  const kid=V('kid');
+  if(S.know.A&&S.t>=70&&!kid.known&&kid.status==='trapped'){kid.known=true;log('三樓前窗有孩童隔著鐵窗呼救！','alert');}
+
+  // 關係人
+  if(S.son==='calm'&&!S.know.interview&&S.t>=CFG.sonAt){
+    S.son='agitated';S.sonDeadline=S.t+CFG.sonWindow;
+    log('屋主兒子情緒激動，拿著鑰匙要衝進去救母親！','alert');
+  }
+  if(S.son==='agitated'&&S.t>=S.sonDeadline&&!has('interview')){
+    S.son='entered';
+    S.victims.push({id:'son',name:'屋主兒子',room:'1F樓梯',hp:100,status:'trapped',known:true});
+    log('屋主兒子由鐵捲門側小門衝進火場，沒有出來！','alert');
+  }
+
+  // 空氣
+  for(const c of S.crew){
+    if(!c.inside||c.gone) continue;
+    c.air--;
+    if(c.air===CFG.airWarn) log(`${c.name}空氣瓶低壓警報（剩約5分鐘）`,'alert');
+    if(c.air<=0){const a=S.active.find(x=>x.key===c.task);mayday(`${c.name}空氣耗盡`,a?a.crew:[c.id]);if(S.over)return;}
+  }
+
+  // 增援
+  if(S.reinf.req!=null&&!S.reinf.arrived&&S.t>=S.reinf.req+CFG.eta){
+    S.reinf.arrived=true;
+    ['增援隊員1','增援隊員2','增援隊員3'].forEach((n,i)=>S.crew.push({id:'r'+i,name:n,ab:'援'+(i+1),cmd:false,task:null,inside:false,air:CFG.air,gone:false,note:''}));
+    S.tank2+=CFG.water.reserve;
+    log('第二梯次到場：增援 3 人＋水庫車 8,000 公升（可用「2號車水量轉入」補水）。','good');
+  }
+
+  // 紀錄
+  const c0=S.crew[0]; if(c0.task) S.ck.cmdBusy++;
+  if(S.crew.some(c=>c.inside&&!c.gone)){
+    const outN=S.crew.filter(c=>!c.gone&&!c.inside).length;
+    S.ck.minOut=S.ck.minOut==null?outN:Math.min(S.ck.minOut,outN);
+  }
+
+  render();
+  if(S.t>=CFG.timeLimit) return endGame('演練時間到');
+  if(S.victims.every(v=>v.status!=='trapped')&&S.F<=0) endGame('火勢撲滅，受困者均已處置');
+}
+
+/* ===== 畫面 ===== */
+function render(){renderTop();renderScene();renderCrew();updateTasks();}
+function fireLabel(){
+  if(S.F<=0) return '撲滅'; if(S.F<15) return '受控';
+  if(S.ck.flashover!=null&&S.F>=90) return '全面燃燒';
+  if(S.F>=75) return '閃燃徵兆'; return '成長期';
+}
+function renderTop(){
+  $('#clock').innerHTML=`T+${fmt(S.t)}<small id="modeTag">${S.mode==='exam'?'考核':'練習'}${S.paused?'｜已暫停':''}</small>`;
+  const r=S.reinf; const rTxt=r.req==null?'未請求':r.arrived?'已到場':`約 ${fmt(Math.max(0,r.req+CFG.eta-S.t))}`;
+  $('#gauges').innerHTML=
+    `<span>火勢<span class="meter"><i style="width:${S.F.toFixed(0)}%"></i></span><b>${fireLabel()}</b></span>`+
+    `<span>1號車 <b>${S.hydrant?'消防栓供水':Math.round(S.tank1)+' L'}</b></span>`+
+    `<span>2號車 <b>${Math.round(S.tank2)} L</b></span>`+
+    `<span>增援 <b>${rTxt}</b></span>`+
+    `<span>救護車 <b>${S.ambGone?'已後送':'在場'}</b></span>`;
+  $('#bPause').style.display=S.mode==='exam'?'none':'';
+  $('#bPause').textContent=S.paused?'繼續':'暫停';
+  document.querySelectorAll('[data-sp]').forEach(b=>b.classList.toggle('on',+b.dataset.sp===S.speed));
+}
+const smk = c => `rgba(30,28,27,${Math.min(.9,Math.max(0,c/100)).toFixed(2)})`;
+const vcol = h => h>60?'#23824f':h>30?'#e39b00':'#c8102e';
+function renderScene(){
+  const F=S.F;
+  let s=`<rect width="420" height="262" fill="var(--sky)"/><rect y="262" width="420" height="38" fill="var(--ground)"/>`;
+  s+=`<text x="6" y="16" font-size="11" font-weight="700" fill="var(--ink)">A面 巷道</text><text x="414" y="16" font-size="11" font-weight="700" fill="var(--ink)" text-anchor="end">C面 防火巷</text>`;
+  s+=`<rect x="352" y="96" width="68" height="166" fill="var(--wall)" stroke="var(--wallline)" stroke-width="1" opacity=".55"/><text x="386" y="90" font-size="9" fill="var(--muted)" text-anchor="middle">後方鄰房</text>`;
+  // 建物
+  s+=`<rect x="130" y="106" width="180" height="156" fill="var(--wall)"/><rect x="168" y="70" width="104" height="36" fill="var(--wall)"/>`;
+  const zones=[
+    [130,210,75,52,Math.max(S.St*0.7,F*0.9)],[235,210,75,52,S.St*0.8],
+    [205,106,30,156,S.St],
+    [130,158,75,52,S.C2],[235,158,75,52,S.C2],
+    [130,106,75,52,cond(V('kid'))],[235,106,75,52,S.C3],
+    [168,70,104,36,S.C3*0.85]];
+  zones.forEach(z=>s+=`<rect x="${z[0]}" y="${z[1]}" width="${z[2]}" height="${z[3]}" fill="${smk(z[4])}"/>`);
+  if(F>0){
+    const fw=S.ck.flashover!=null&&F>=90?180:75;
+    s+=`<rect x="130" y="210" width="${fw}" height="52" fill="#ff7a1a" opacity="${(F/100*0.55).toFixed(2)}"/>`;
+    const h=8+F*0.38;
+    [145,163,181].forEach((x,i)=>{ if(F>12+i*12) s+=`<path class="flame" d="M${x-7} 262 Q${x-6} ${262-h*0.6} ${x} ${262-h} Q${x+6} ${262-h*0.6} ${x+7} 262Z" fill="#ff8c1a" opacity=".9"/>`; });
+  }
+  s+=`<rect x="146" y="248" width="26" height="10" rx="3" fill="#333a42"/><circle cx="150" cy="259" r="3" fill="#333a42"/><circle cx="168" cy="259" r="3" fill="#333a42"/>`;
+  // 樓板、外框
+  s+=`<g stroke="var(--wallline)" stroke-width="2" fill="none"><rect x="130" y="106" width="180" height="156"/><rect x="168" y="70" width="104" height="36"/><line x1="130" y1="210" x2="310" y2="210"/><line x1="130" y1="158" x2="310" y2="158"/></g>`;
+  s+=`<g stroke="var(--wallline)" stroke-width="1" stroke-dasharray="3 3"><line x1="205" y1="106" x2="205" y2="262"/><line x1="235" y1="106" x2="235" y2="262"/></g>`;
+  s+=`<g font-size="9" fill="var(--wallline)" font-weight="700"><text x="300" y="256" text-anchor="end">1F</text><text x="300" y="204" text-anchor="end">2F</text><text x="300" y="152" text-anchor="end">3F</text><text x="266" y="100" text-anchor="end">頂加</text><text x="220" y="100" text-anchor="middle" font-weight="400">樓梯</text></g>`;
+  // 鐵捲門
+  if(!S.shutter){s+=`<rect x="125" y="212" width="9" height="50" fill="#7b838c"/>`;for(let y=216;y<262;y+=5)s+=`<line x1="125" y1="${y}" x2="134" y2="${y}" stroke="#5a616a"/>`;}
+  else if(F>15) s+=`<circle cx="118" cy="220" r="8" fill="${smk(F)}"/><circle cx="108" cy="210" r="10" fill="${smk(F*0.7)}"/>`;
+  // 後門
+  if(!S.back) s+=`<rect x="306" y="228" width="8" height="34" fill="#6d5a44"/>`;
+  // 三樓前窗與鐵窗
+  s+=`<rect x="126" y="116" width="8" height="26" fill="${S.bars?'#222':'#9cc3e0'}"/>`;
+  if(!S.bars){s+=`<rect x="116" y="113" width="14" height="32" fill="none" stroke="#4a5058" stroke-width="1.5"/>`;[119,123,127].forEach(x=>s+=`<line x1="${x}" y1="113" x2="${x}" y2="145" stroke="#4a5058" stroke-width="1.5"/>`);}
+  else if(!S.attackOn&&F>20) s+=`<circle cx="112" cy="122" r="9" fill="${smk(S.C3)}"/>`;
+  // 三節梯
+  if(S.ladder){s+=`<g stroke="#b58b3a" stroke-width="2.5"><line x1="88" y1="262" x2="116" y2="138"/><line x1="98" y1="262" x2="126" y2="138"/></g>`;for(let i=1;i<12;i++){const t=i/12;s+=`<line x1="${88+28*t}" y1="${262-124*t}" x2="${98+28*t}" y2="${262-124*t}" stroke="#b58b3a" stroke-width="1.5"/>`;}}
+  // 車輛
+  s+=`<rect x="4" y="238" width="52" height="22" rx="2" fill="#c8102e"/><text x="30" y="253" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">水箱1</text>`;
+  s+=`<rect x="4" y="212" width="52" height="22" rx="2" fill="#c8102e" opacity=".85"/><text x="30" y="227" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">水箱2</text>`;
+  if(!S.ambGone) s+=`<rect x="4" y="186" width="44" height="22" rx="2" fill="#fff" stroke="#c8102e" stroke-width="1.5"/><text x="26" y="201" font-size="10" fill="#c8102e" text-anchor="middle" font-weight="700">救護車</text>`;
+  s+=`<text x="4" y="292" font-size="9" fill="#fff">← 消防栓 80m</text>`;
+  if(S.hydrant) s+=`<path d="M0 278 Q20 276 30 260" stroke="#1f6fb2" stroke-width="3" fill="none" stroke-dasharray="5 3"/>`;
+  if(S.line) s+=`<path d="M56 252 Q92 270 124 252" stroke="#1f6fb2" stroke-width="${S.attackOn?4:2.5}" fill="none"/>`;
+  if(S.attackOn) s+=`<path d="M${has('intAttack')?150:120} 248 Q160 238 168 250" stroke="#7fc4ff" stroke-width="3" fill="none" stroke-dasharray="2 3"/>`;
+  // 受困者
+  const vpos={kid:[160,140],gma:[280,140],son:[220,240]};
+  let oi=0;
+  S.victims.forEach(v=>{
+    if(v.status==='trapped'&&v.known){const p=vpos[v.id];s+=`<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="${vcol(v.hp)}" stroke="#fff" stroke-width="1.5"/><text x="${p[0]}" y="${p[1]-11}" font-size="9" fill="#fff" text-anchor="middle" font-weight="700" paint-order="stroke" stroke="#000" stroke-width="2">${v.name.slice(0,2)}</text>`;}
+    if(v.status==='out'){const x=56+oi*16;oi++;s+=`<circle cx="${x}" cy="194" r="6" fill="${vcol(v.hp)}" stroke="#fff"/><text x="${x}" y="183" font-size="8" fill="var(--ink)" text-anchor="middle">${v.name.slice(0,2)}</text>`;}
+    if(v.status==='dead'&&v.known&&v.outAt==null){const p=vpos[v.id];s+=`<text x="${p[0]}" y="${p[1]+4}" font-size="13" fill="#888" text-anchor="middle" font-weight="800">✕</text>`;}
+  });
+  // 人員
+  const L={idle:[100,198],sizeA:[112,230],interview:[84,214],stopSon:[118,232],forceShutter:[116,252],doorCtl:[120,238],extAttack:[110,250],
+    ladder:[96,254],cutBars:[118,150],ladderRescue:[150,128],rit:[78,198],pump:[64,244],layLine:[90,256],hydrant:[14,278],transfer:[64,222],
+    sizeC:[332,248],forceBack:[322,250],intAttack:[178,250],care:[60,180],transport:[40,180]};
+  const groups={};
+  S.crew.filter(c=>!c.gone).forEach(c=>{
+    const a=c.task?S.active.find(x=>x.key===c.task):null;
+    let p;
+    if(!a) p=L.idle;
+    else if(a.def.id==='search'){const pr=1-a.left/a.total;p=[220,pr<0.5?250-pr*2*110:140+(pr-0.5)*2*110];}
+    else p=L[a.def.id]||L.idle;
+    const k=p.join(','); (groups[k]=groups[k]||{p,list:[]}).list.push(c);
+  });
+  Object.values(groups).forEach(g=>g.list.forEach((c,i)=>{
+    const x=g.p[0]+(i%3)*13-((Math.min(g.list.length,3)-1)*6.5), y=g.p[1]-Math.floor(i/3)*13;
+    s+=`<circle cx="${x}" cy="${y}" r="6.5" fill="${c.cmd?'#c8102e':'#16202a'}" stroke="${selected.has(c.id)?'#5c9bff':'#fff'}" stroke-width="${selected.has(c.id)?2.5:1.2}"/><text x="${x}" y="${y+3}" font-size="${c.ab.length>1?6:8}" fill="#fff" text-anchor="middle" font-weight="700">${c.ab}</text>`;
+  }));
+  $('#scene').innerHTML=s;
+  const b=$('#banner');
+  if(S.banner&&S.t<=S.banner.until&&!S.over){b.textContent=S.banner.msg;b.classList.add('show');}else b.classList.remove('show');
+}
+function renderCrew(){
+  const box=$('#crew');
+  if(box.dataset.n!==String(S.crew.length)){
+    box.innerHTML='';
+    S.crew.forEach(c=>{
+      const d=document.createElement('div');d.className='crew'+(c.cmd?' cmd':'');d.dataset.id=c.id;d.tabIndex=0;
+      d.innerHTML=`<div class="cav">${c.ab}</div><div class="cinfo"><b>${c.name}</b><span class="cst"></span><div class="air"><i></i></div></div><button class="recall" type="button">撤回</button>`;
+      d.onclick=()=>toggleSel(c.id);
+      d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleSel(c.id);}};
+      d.querySelector('.recall').onclick=e=>{e.stopPropagation();recallCrew(c.id);};
+      box.appendChild(d);
+    });
+    box.dataset.n=String(S.crew.length);
+  }
+  S.crew.forEach(c=>{
+    const d=box.querySelector(`[data-id="${c.id}"]`); const a=c.task?S.active.find(x=>x.key===c.task):null;
+    d.classList.toggle('sel',selected.has(c.id)); d.classList.toggle('busy',!!a&&!c.gone); d.classList.toggle('inside',c.inside&&!c.gone); d.classList.toggle('gone',c.gone);
+    d.querySelector('.cst').textContent=c.gone?c.note:a?`${a.def.name}${a.total!=null?'，剩 '+a.left+' 秒':''}`:'待命';
+    const air=d.querySelector('.air'), bar=air.firstElementChild;
+    air.style.display=c.inside?'block':'none';
+    bar.style.width=(c.air/CFG.air*100)+'%'; bar.style.background=c.air<=CFG.airWarn?'var(--red)':'var(--ok)';
+    d.querySelector('.recall').style.display=a&&!S.over?'inline-block':'none';
+  });
+}
+function buildTasks(){
+  const wrap=$('#tasks'); wrap.innerHTML='';
+  const cz=document.createElement('div'); cz.className='zone cz';
+  cz.innerHTML=`<h3>指揮（不需選人）</h3><div class="tasks">
+    <button class="task" id="bReport" type="button"><b>初期報告</b><small>向指揮中心回報現場狀況</small></button>
+    <button class="task" id="bReinf" type="button"><b>請求增援</b><small>第二梯次約8分鐘到場</small></button>
+    <button class="task" id="bPar" type="button"><b>PAR 人員點名</b><small>確認場內、場外人數</small></button></div>`;
+  wrap.appendChild(cz);
+  const tabs=document.createElement('div'); tabs.className='ztabs'; tabs.setAttribute('role','tablist');
+  ZONES.forEach(z=>{const b=document.createElement('button');b.type='button';b.className='ztab';b.dataset.z=z;b.setAttribute('role','tab');b.innerHTML=`${z}<span class="n"></span>`;b.onclick=()=>{curZone=z;updateTasks();};tabs.appendChild(b);});
+  wrap.appendChild(tabs);
+  ZONES.forEach(z=>{
+    const d=document.createElement('div'); d.className='zone'; d.dataset.z=z; d.innerHTML=`<div class="tasks"></div><p class="hint empty" hidden>這一區目前沒有任務。</p>`;
+    const g=d.querySelector('.tasks');
+    TASKS.filter(t=>t.zone===z).forEach(t=>{
+      const b=document.createElement('button'); b.className='task'; b.type='button'; b.dataset.id=t.id;
+      const ppl=t.min===t.max?`${t.min}人`:`${t.min}–${t.max}人`;
+      const dur=t.dur==null?'持續':typeof t.dur==='number'?`${t.dur}秒`:'';
+      b.innerHTML=`<b>${t.name}</b><small>${ppl}${dur?'，'+dur:''}${t.idlh?'，入室':''}</small>${t.desc?`<small>${t.desc}</small>`:''}<small class="why"></small>`;
+      b.onclick=()=>clickTask(t); g.appendChild(b);
+    });
+    wrap.appendChild(d);
+  });
+  $('#bReport').onclick=openReport; $('#bReinf').onclick=reqReinf; $('#bPar').onclick=doPar;
+}
+function updateTasks(){
+  const cnt={},urg={},vis={};
+  TASKS.forEach(t=>{
+    const b=document.querySelector(`.task[data-id="${t.id}"]`); if(!b) return;
+    const r=S.over?'演練已結束':t.avail(), ok=r===true;
+    const hide=(t.hidden&&t.hidden())||(typeof r==='string'&&r.startsWith('已'));
+    b.style.display=hide?'none':'';
+    b.classList.toggle('na',!ok); b.classList.toggle('urgent',!!t.urgent&&ok);
+    b.querySelector('.why').textContent=ok?'':r;
+    if(ok) cnt[t.zone]=(cnt[t.zone]||0)+1;
+    if(ok&&t.urgent) urg[t.zone]=1;
+    if(!hide) vis[t.zone]=1;
+  });
+  document.querySelectorAll('.ztab').forEach(b=>{const z=b.dataset.z,on=z===curZone;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);b.classList.toggle('alert',!!urg[z]&&!on);b.querySelector('.n').textContent=cnt[z]||0;});
+  document.querySelectorAll('#tasks .zone[data-z]').forEach(d=>{d.hidden=d.dataset.z!==curZone;d.querySelector('.empty').hidden=!!vis[d.dataset.z];});
+  $('#bReport').classList.toggle('na',S.ck.report!=null);
+  $('#bReinf').classList.toggle('na',S.reinf.req!=null);
+}
+function renderFeed(){
+  $('#feed').innerHTML=S.log.slice(0,80).map(l=>`<div class="${l.type}"><time>${fmt(l.t)}</time><span>${l.msg}</span></div>`).join('');
+}
+
+/* ===== 事後檢討 ===== */
+function endGame(reason){
+  if(S.over) return;
+  S.over=true; S.endReason=reason; clearInterval(timer); timer=null;
+  render(); showAAR();
+}
+function showAAR(){
+  const c=S.ck, ft=t=>t==null?'未執行':`T+${fmt(t)}`;
+  const re=c.reportEval;
+  const items=[
+    ['A面環場評估（60秒內）', c.sizeA==null?false:c.sizeA<=60, ft(c.sizeA), '到場先看全貌再決定戰術，評估前就動手容易選錯進入點。'],
+    ['初期報告（150秒內）', c.report==null?false:c.report<=150, ft(c.report), '初報讓指揮中心和後續單位掌握狀況，也逼自己整理判斷。'],
+    ['初期報告內容', re==null?false:(re.errs.length===0&&re.missing.length===0),
+      re==null?'未報告':(re.errs.length||re.missing.length?[...re.errs,...(re.missing.length?[`缺 ${re.missing.length} 項`]:[])].join('；'):'完整且正確'),
+      '不確定的資訊要說「疑似」，不要說成確定，也不要沒查證就排除。'],
+    ['向關係人確認受困者', c.interview!=null, ft(c.interview), '關係人是最快的情報來源；拖太久，家屬可能自己衝進去。'],
+    ['請求增援（180秒內）', c.reinforce==null?false:c.reinforce<=180, ft(c.reinforce), '偏遠地區增援要 8 分鐘以上，3–4 人無法同時救人、攻擊、成立 RIT，越早請求越好。'],
+    ['破門前水線已就緒', c.shutter==null?null:c.waterAtShutter, c.shutter==null?'未破門':(c.waterAtShutter?'是':'否'), '開門就是給火氧氣，水線充水、泵浦有人操作後再開門。'],
+    ['沒有在射水前破窗排煙', c.ventBeforeWater==null?null:!c.ventBeforeWater, c.ventBeforeWater==null?'未破窗':(c.ventBeforeWater?'射水前就破窗':'有配合射水'), '無水排煙會把火煙拉向排煙口，而三樓前窗正是受困孩童的房間。'],
+    ['水源不中斷', !c.tankDry, c.tankDry?'曾經斷水':'未斷水', '2,000 公升約 5 分半就用完，接栓或補水要在攻擊開始時就安排。'],
+    ['入室時場外至少 2 人', c.minOut==null?null:c.minOut>=2, c.minOut==null?'無人入室':`入室期間場外最少 ${c.minOut} 人`, '人力不足時做不到 2進2出是現實，重點是你知道自己承擔了這個風險，並向上回報。'],
+    ['成立 RIT', c.rit!=null, ft(c.rit), '第一梯次通常做不到，等增援到場要優先成立。'],
+    ['PAR 人員點名', c.par.length>0, c.par.length?`${c.par.length} 次`:'未點名', '狀況轉變（破門、閃燃徵兆、撤退）後都應點名。'],
+    ['指揮官投入作業時間', null, `${c.cmdBusy} 秒`, '人少時帶隊官動手是常態，但投入越久，越沒人在看全局。'],
+  ];
+  const vrows=S.victims.map(v=>{
+    const st=v.status==='transported'?'已後送':v.status==='out'?'已救出（現場）':v.status==='dead'?'死亡':'仍受困';
+    return `<tr><td>${v.name}</td><td>${v.room}</td><td>${st}</td><td>${v.status==='dead'?'—':hpTxt(v.hp)}</td></tr>`;}).join('');
+  const saved=S.victims.filter(v=>(v.status==='out'||v.status==='transported')&&v.hp>0).length;
+  const icon=x=>x===true?'<span class="ic pass">✓</span>':x===false?'<span class="ic fail">✕</span>':'<span class="ic na">－</span>';
+  $('#aarBody').innerHTML=`
+    <h1>事後檢討（AAR）</h1>
+    <p>${S.endReason}｜演練時間 T+${fmt(S.t)}｜救出 ${saved} / ${S.victims.length} 人${c.flashover!=null?`｜T+${fmt(c.flashover)} 一樓閃燃`:''}${c.mayday?`｜T+${fmt(c.mayday.t)} MAYDAY`:''}</p>
+    <p class="hint" id="sendStatus"></p>
+    <h2>受困者</h2>
+    <table class="vt">${vrows}</table>
+    <h2>檢核點</h2>
+    ${items.map(i=>`<div class="ck">${icon(i[1])}<div><b>${i[0]}</b>：${i[2]}</div><small>${i[3]}</small></div>`).join('')}
+    <h2>時間軸</h2>
+    <div class="tl">${[...S.log].reverse().map(l=>`<div><time>T+${fmt(l.t)}</time>${l.msg}</div>`).join('')}</div>
+    <div class="row"><button class="btn go" id="bAgain" type="button">再演練一次</button><button class="btn" id="bSetup" type="button">回到設定</button><button class="btn" id="bClose" type="button">回到現場畫面</button><button class="btn" id="bResend" type="button">重新上傳</button></div>`;
+  $('#aar').classList.add('show');
+  $('#bAgain').onclick=()=>startGame(S.crew.filter(x=>x.id.startsWith('c')).length,S.mode);
+  $('#bSetup').onclick=()=>{$('#aar').classList.remove('show');$('#start').classList.add('show');};
+  $('#bClose').onclick=()=>$('#aar').classList.remove('show');
+  $('#bResend').onclick=()=>{S.sent=false;sendAAR(items);};
+  sendAAR(items);
+}
+
+/* ===== 上傳 AAR 至 Google Sheets ===== */
+async function sendAAR(items){
+  const st=$('#sendStatus'); if(!st) return;
+  if(!CFG.gasUrl){st.textContent='尚未設定 Google Sheets 網址，本次結果未上傳。';return;}
+  if(S.t<20){st.textContent='演練時間過短，未上傳。';return;}
+  if(S.sent){st.textContent='✓ 本次結果已上傳。';return;}
+  const c=S.ck, stTxt={trapped:'仍受困',out:'已救出',transported:'已後送',dead:'死亡'};
+  const payload={
+    runId:S.runId, name:S.tester.name, unit:S.tester.unit, scenario:`${CFG.id} ${CFG.title}`,
+    crew:S.n, mode:S.mode, reason:S.endReason, duration:S.t,
+    saved:S.victims.filter(v=>(v.status==='out'||v.status==='transported')&&v.hp>0).length, total:S.victims.length,
+    victims:S.victims.map(v=>({name:v.name,status:stTxt[v.status]+(v.status==='dead'?'':`（${hpTxt(v.hp)}）`)})),
+    flashover:c.flashover, mayday:c.mayday,
+    checks:items.map(i=>({item:i[0],pass:i[1],detail:i[2]})),
+    passCount:items.filter(i=>i[1]===true).length, checkCount:items.filter(i=>i[1]!==null).length,
+    log:[...S.log].reverse()
+  };
+  const body=JSON.stringify(payload), opt={method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body};
+  st.textContent='上傳中…';
+  try{
+    const r=await fetch(CFG.gasUrl,opt); const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'寫入失敗');
+    S.sent=true; st.textContent=j.dup?'✓ 此紀錄先前已上傳。':'✓ 已上傳到 Google Sheets。';
+  }catch(e){
+    try{
+      await fetch(CFG.gasUrl,{...opt,mode:'no-cors'});
+      S.sent=true; st.textContent='已送出（瀏覽器無法確認回應，請到試算表確認）。';
+    }catch(e2){ st.textContent='上傳失敗，請確認網路後按「重新上傳」。'; }
+  }
+}
+
+/* ===== 啟動 ===== */
+function setSpeed(x){S.speed=x;clearInterval(timer);timer=setInterval(tick,1000/x);renderTop();}
+function startGame(n,mode){
+  n=n||+$('#optCrew').value; mode=mode||$('#optMode').value;
+  const nm=$('#optName').value.trim(), un=$('#optUnit').value.trim();
+  if(CFG.gasUrl&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
+  try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));}catch(e){}
+  clearInterval(timer); S=newState(n,mode); selected.clear(); curZone='A面';
+  S.tester={name:nm||'未填',unit:un};
+  ['#rBld','#rFloor','#rCond','#rVict','#rMode','#rCp'].forEach(id=>$(id).value=''); $('#rReq').value='no';
+  $('#crew').dataset.n=''; buildTasks();
+  $('#start').classList.remove('show'); $('#aar').classList.remove('show'); $('#report').classList.remove('show');
+  log(`第一梯次到場：水箱車2輛、救護車1輛，共 ${n} 人。一樓鐵捲門緊閉，門縫冒出濃煙。`,'radio');
+  render(); setSpeed(1);
+}
+$('#briefTxt').textContent=CFG.brief;
+try{const t=JSON.parse(localStorage.getItem('fgc_tester')||'null');if(t){$('#optName').value=t.nm||'';$('#optUnit').value=t.un||'';}}catch(e){}
+$('#bStart').onclick=()=>startGame();
+$('#bSendReport').onclick=sendReport;
+$('#bCancelReport').onclick=()=>$('#report').classList.remove('show');
+$('#bPause').onclick=()=>{if(!S||S.mode==='exam'||S.over)return;S.paused=!S.paused;renderTop();};
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{if(S&&!S.over)setSpeed(+b.dataset.sp);});
+$('#bEnd').onclick=()=>{if(S&&!S.over&&confirm('確定結束演練並進行事後檢討？'))endGame('帶隊官結束演練');};
+// 初始畫面（尚未開始）
+S=newState(4,'practice'); S.over=true; buildTasks(); render(); renderFeed();
+</script>
+</body>
