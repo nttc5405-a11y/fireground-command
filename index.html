@@ -64,6 +64,7 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .feed .radio span::before{content:"無線電｜";color:var(--blue);font-weight:700}
 
 .crewlist{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;align-items:start}
+.utabs,.qsel{display:none}
 .ugrp{display:flex;flex-direction:column;gap:6px;min-width:0}
 .uhd{font-size:12px;font-weight:700;color:var(--muted)}
 .ugrp .crew{flex-wrap:wrap;gap:4px 8px}
@@ -171,10 +172,25 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
   .panel h2{margin-bottom:6px}
   .feedp{display:none}
   .ticker{display:block}
-  .crewlist{display:flex;overflow-x:auto;gap:6px;padding-bottom:4px;scroll-snap-type:x proximity}
-  .ugrp{display:contents}
+  .utabs{display:flex;gap:4px;margin-bottom:6px}
+  .utab{flex:1;position:relative;border:2px solid var(--line);background:var(--chip);border-radius:6px;padding:6px 4px;font-weight:700;font-size:13px;cursor:pointer;line-height:1.25}
+  .utab small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+  .utab.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .utab.on small{color:var(--panel)}
+  .utab[data-u="A"]{border-bottom:5px solid #1f6fb2}
+  .utab[data-u="B"]{border-bottom:5px solid #7a3fb0}
+  .utab[data-u="R"]{border-bottom:5px solid #23824f}
+  .utab[data-u="own"]{border-bottom:5px solid #16202a}
+  .utab .dot{position:absolute;top:3px;right:4px;width:10px;height:10px;border-radius:50%;background:var(--red);display:none}
+  .utab.warn .dot{display:block}
+  .qsel{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .qsel .btn{flex:1 1 0;min-width:0;padding:7px 4px;white-space:nowrap}
+  .qsel .cnt{flex:1 0 100%;font-size:12px;color:var(--muted)}
+  .crewlist{display:grid;grid-auto-flow:row;grid-template-columns:1fr 1fr;grid-auto-columns:auto;gap:6px}
+  .ugrp{display:none}
+  .ugrp.act{display:contents}
   .uhd{display:none}
-  .crew{flex:0 0 148px;width:148px;min-width:0;min-height:50px;padding:5px 6px;scroll-snap-align:start;flex-wrap:wrap;gap:4px 6px}
+  .crew{width:auto;min-width:0;min-height:50px;padding:5px 6px;flex-wrap:wrap;gap:4px 6px}
   .crew .cinfo{flex:1 1 90px}
   .crew .recall{margin-left:auto}
   .cinfo b{font-size:13px}
@@ -222,6 +238,8 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
   <div class="col">
     <section class="panel">
       <h2>人員 <span>先點人再點任務｜黃：派遣中　紅：危險區</span></h2>
+      <div class="utabs" id="utabs" role="tablist"></div>
+      <div class="qsel" id="qsel"><button class="btn" type="button" data-q="2">選 2 人</button><button class="btn" type="button" data-q="3">選 3 人</button><button class="btn" type="button" data-q="0">全選待命</button><button class="btn" type="button" data-q="-1">清除</button><span class="cnt" id="selCnt"></span></div>
       <div class="crewlist" id="crew"></div>
     </section>
     <section class="panel">
@@ -1181,6 +1199,33 @@ function renderScene(){
   }));
   $('#scene').innerHTML=s;
 }
+let curUnit='own';
+const UNIT_LABEL={own:'本隊',A:'A 隊',B:'B 隊',R:'增援'};
+function renderUnitTabs(){
+  const us=['own','A','B','R'].filter(u=>S.crew.some(c=>c.u===u));
+  if(!us.includes(curUnit)) curUnit='own';
+  $('#utabs').innerHTML=us.map(u=>{
+    const m=S.crew.filter(c=>c.u===u&&!c.gone), idle=m.filter(c=>!c.task).length, busy=m.length-idle;
+    const warn=m.some(c=>c.inside&&c.air<=AIR_WARN);
+    return `<button type="button" role="tab" class="utab${u===curUnit?' on':''}${warn?' warn':''}" data-u="${u}" aria-selected="${u===curUnit}">${UNIT_LABEL[u]}<small>待命 ${idle}／任務 ${busy}</small><i class="dot"></i></button>`;
+  }).join('');
+  document.querySelectorAll('.ugrp').forEach(g=>g.classList.toggle('act',g.dataset.u===curUnit));
+  const n=[...selected].length; $('#selCnt').textContent=n?`已選 ${n} 人：${names([...selected])}`:'尚未選人（點人員卡片，或用上面的快速鍵）';
+}
+function quickSel(n){
+  if(!S||S.over||S.choiceOpen) return;
+  selected.clear();
+  if(n>=0){
+    const idle=S.crew.filter(c=>c.u===curUnit&&!c.gone&&!c.task);
+    const pick=n===0?idle:idle.slice(0,n);
+    if(!pick.length) toast('這個單位目前沒有待命人員');
+    else if(n>0&&pick.length<n) toast(`這個單位只有 ${pick.length} 人待命`);
+    pick.forEach(c=>selected.add(c.id));
+  }
+  renderCrew(); renderScene();
+}
+$('#utabs').onclick=e=>{const b=e.target.closest('.utab'); if(!b) return; if(curUnit!==b.dataset.u){curUnit=b.dataset.u;selected.clear();renderScene();} renderCrew();};
+$('#qsel').onclick=e=>{const b=e.target.closest('[data-q]'); if(b) quickSel(+b.dataset.q);};
 function renderCrew(){
   const box=$('#crew');
   if(box.dataset.n!==String(S.crew.length)){
@@ -1212,6 +1257,7 @@ function renderCrew(){
     bar.style.width=(c.air/AIR*100)+'%'; bar.style.background=c.air<=AIR_WARN?'var(--red)':'var(--ok)';
     d.querySelector('.recall').style.display=a&&!S.over?'inline-block':'none';
   });
+  renderUnitTabs();
 }
 function buildTasks(){
   const wrap=$('#tasks'), sc=S.sc; wrap.innerHTML='';
@@ -1514,7 +1560,7 @@ function startGame(scId,n,mode,extra,sizes){
   try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));}catch(e){}
   try{$('#introVid').pause();}catch(e){}
   clearInterval(timer); alertQ.length=0; nextAlert();
-  newState(scId,n,mode,extra,sizes); selected.clear(); curZone=S.sc.zones[0];
+  newState(scId,n,mode,extra,sizes); selected.clear(); curUnit='own'; curZone=S.sc.zones[0];
   S.tester={name:nm||'未填',unit:un};
   $('#crew').dataset.n=''; buildTasks(); buildReportForm();
   $('#scTitle').innerHTML=`${S.sc.title} <span>${S.sc.hint}</span>`;
