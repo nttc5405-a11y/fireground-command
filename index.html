@@ -7,17 +7,10 @@
 <title>消防指揮情境訓練</title>
 <style>
 :root{
-  --bg:#e7ebee;--panel:#ffffff;--ink:#16202a;--muted:#5b6672;--line:#cdd4db;--chip:#eef1f4;
+  --bg:#f3f5f7;--panel:#ffffff;--ink:#05090d;--muted:#33404c;--line:#6f7b87;--chip:#e4e9ee;
   --red:#c8102e;--amber:#e39b00;--blue:#1f6fb2;--ok:#23824f;--sel:#1f6fb2;
   --sky:#c9d3dd;--ground:#8d8a84;--wall:#f1ede6;--wallline:#38404a;--street:#6d6b67;--grass:#a7b593;--road:#575b61;
   color-scheme:light;
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#0f1418;--panel:#182029;--ink:#e5eaef;--muted:#93a0ad;--line:#2c3742;--chip:#212b35;
-    --sky:#1a2531;--ground:#3a3834;--wall:#2a2f35;--wallline:#a9b3bd;--street:#2d2c2a;--sel:#5c9bff;--grass:#2b3426;--road:#2c3035;
-    color-scheme:dark;
-  }
 }
 :root[data-theme="dark"]{
   --bg:#0f1418;--panel:#182029;--ink:#e5eaef;--muted:#93a0ad;--line:#2c3742;--chip:#212b35;
@@ -73,6 +66,9 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .crew.gone{opacity:.45;cursor:default;background:var(--chip);border-color:var(--line)}
 .cav{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--panel);font-weight:800;font-size:12px;flex:none}
 .crew.cmd .cav{background:var(--red);color:#fff}
+.crew[data-u="A"]{border-left:7px solid #1f6fb2}
+.crew[data-u="B"]{border-left:7px solid #7a3fb0}
+.crew[data-u="R"]{border-left:7px solid #23824f}
 .cinfo{min-width:0;flex:1;font-size:12.5px;line-height:1.3}
 .cinfo b{font-size:14px}
 .cst{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -127,6 +123,7 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .sheet h2{font-size:16px;margin:18px 0 6px}
 .sheet p{margin:6px 0}
 .sheet label{display:block;font-size:13px;font-weight:700;margin:10px 0 3px}
+.sheet textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);font:inherit;resize:vertical}
 .sheet select,.sheet input{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);font:inherit}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
@@ -187,6 +184,8 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
   <div class="clock" id="clock">T+00:00</div>
   <div class="gauges" id="gauges"></div>
   <div class="ctl">
+    <button class="btn" id="bSup" type="button">呼叫支援單位</button>
+    <button class="btn" id="bFb" type="button">意見回饋</button>
     <button class="btn" id="bSound" type="button" aria-label="提示音開關">提示音：開</button>
     <button class="btn" id="bPause" type="button">暫停</button>
     <button class="btn" data-sp="1" type="button">1×</button>
@@ -230,10 +229,32 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
       <div><label for="optName">姓名</label><input id="optName" autocomplete="name" placeholder="例：王小明"></div>
       <div><label for="optUnit">單位</label><input id="optUnit" placeholder="例：成功分隊"></div>
       <div><label for="optCrew">第一梯次出勤人數（含帶隊官）</label><select id="optCrew"><option value="4">4 人</option><option value="3">3 人</option></select></div>
+      <div><label>同時抵達的支援單位（各 3 人）</label><div class="row" style="margin:0;align-items:center"><button class="btn" id="bExM" type="button" aria-label="減少支援單位">－</button><b id="exTxt" style="min-width:150px;text-align:center"></b><button class="btn" id="bExP" type="button" aria-label="增加支援單位">＋</button></div><input type="hidden" id="optExtra" value="0"></div>
       <div><label for="optMode">模式</label><select id="optMode"><option value="practice">練習：可暫停、可加速</option><option value="exam">考核：不可暫停</option></select></div>
     </div>
     <p class="hint" style="margin-top:12px">操作：先點選待命人員，再點任務。灰色任務點下去會說明現在為什麼不能做。指揮類動作不需要選人。</p>
-    <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button></div>
+    <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button><button class="btn" id="bFbStart" type="button">意見回饋</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="fb">
+  <div class="sheet">
+    <h1>意見回饋</h1>
+    <p class="hint">你的意見會傳到試算表，作為調整情境內容與數值的參考。沒有要填的欄位可以空白。</p>
+    <label for="fbSc">針對哪個情境</label>
+    <select id="fbSc"><option value="整體">整體／操作介面</option><option value="S001">S001 透天厝火災</option><option value="S002">S002 車禍救助</option><option value="S003">S003 槽車洩漏</option></select>
+    <label for="fbReal">情境真實度</label>
+    <select id="fbReal"><option value="">請選擇</option><option>1 與實務差很多</option><option>2 偏不真實</option><option>3 普通</option><option>4 蠻接近實務</option><option>5 非常貼近實務</option></select>
+    <label for="fbDiff">難度</label>
+    <select id="fbDiff"><option value="">請選擇</option><option>太簡單</option><option>偏簡單</option><option>剛好</option><option>偏難</option><option>太難</option></select>
+    <label for="fbTime">時間與人力數值（作業秒數、增援時間、人數）</label>
+    <select id="fbTime"><option value="">請選擇</option><option>大致合理</option><option>作業時間太長</option><option>作業時間太短</option><option>增援／支援太慢</option><option>增援／支援太快</option><option>人力設定不合理</option></select>
+    <label for="fbBad">哪裡不合理或不符實務？（任務、時間、事件）</label>
+    <textarea id="fbBad" rows="3" placeholder="例：破鐵捲門 90 秒太短，實際約 3 分鐘"></textarea>
+    <label for="fbSug">建議新增或修改的內容</label>
+    <textarea id="fbSug" rows="3" placeholder="例：希望增加山區道路火災情境"></textarea>
+    <p class="hint" id="fbStatus"></p>
+    <div class="row"><button class="btn go" id="bFbSend" type="button">送出回饋</button><button class="btn" id="bFbClose" type="button">關閉</button></div>
   </div>
 </div>
 
@@ -310,7 +331,7 @@ function rescue(v, how){
   log(`${how}救出${v.name}，移至救護區（生命徵象：${hpTxt(v.hp)}）`,'good');
 }
 function addCrew(list){
-  list.forEach((n,i)=>S.crew.push({id:'r'+S.crew.length,name:n,ab:'援'+(i+1),cmd:false,task:null,inside:false,air:AIR,gone:false,note:''}));
+  list.forEach((n,i)=>S.crew.push({id:'r'+S.crew.length,u:'R',name:n,ab:'援'+(i+1),cmd:false,task:null,inside:false,air:AIR,gone:false,note:''}));
 }
 function drawOut(x,y){
   let s='',i=0;
@@ -976,15 +997,27 @@ S003.tasks = [
 const SC = {S001, S002, S003};
 
 /* ================= 引擎 ================= */
-function newState(scId,n,mode){
+const SUP_ETA = 180;   // 呼叫支援單位後抵達所需秒數
+const unitCrew = u => [[u+'隊長',u+'帶'],[u+'隊員1',u+'1'],[u+'隊員2',u+'2']].map((c,i)=>({id:'x'+u+i,u,name:c[0],ab:c[1],cmd:false,task:null,inside:false,air:AIR,gone:false,note:''}));
+const supLeft = () => ['A','B'].filter(u=>!S.sup.have.includes(u)&&!S.sup.pend.some(p=>p.u===u));
+function callSupport(){
+  if(!S||S.over||S.choiceOpen) return;
+  const u=supLeft()[0]; if(!u){toast('支援單位已全數調派');return;}
+  S.sup.pend.push({u,at:S.t+SUP_ETA});
+  log(`帶隊官：請指揮中心調派 ${u} 隊（3人）支援。指揮中心：收到，預估 ${SUP_ETA/60} 分鐘到場。`,'radio'); render();
+}
+function newState(scId,n,mode,extra){
+  extra=extra||0;
   const sc=SC[scId];
   const base=[['帶隊官','帶',true],['隊員甲','甲'],['隊員乙','乙'],['隊員丙','丙']].slice(0,n);
-  S={sc,t:0,n,mode,runId:Date.now().toString(36)+Math.random().toString(36).slice(2,6),tester:{name:'',unit:''},sent:false,
+  S={sc,t:0,n,extra,mode,runId:Date.now().toString(36)+Math.random().toString(36).slice(2,6),tester:{name:'',unit:''},sent:false,
     speed:1,paused:false,choiceOpen:false,over:false,endReason:'',
-    crew:base.map((c,i)=>({id:'c'+i,name:c[0],ab:c[1],cmd:!!c[2],task:null,inside:false,air:AIR,gone:false,note:''})),
+    crew:[...base.map((c,i)=>({id:'c'+i,u:'own',name:c[0],ab:c[1],cmd:!!c[2],task:null,inside:false,air:AIR,gone:false,note:''})),
+      ...['A','B'].slice(0,extra).flatMap(unitCrew)],
     active:[],seq:0,log:[],warned:{},amb:sc.amb,
     victims:sc.victims.map(v=>({...v,status:'trapped',known:!!v.known})),
     reinf:{req:null,arrived:false},
+    sup:{have:['A','B'].slice(0,extra),pend:[]},
     ck:{report:null,reportEval:null,reinforce:null,par:[],cmdBusy:0,minOut:null,mayday:null,transportSolo:false,rit:null}};
   M=S.m={}; sc.init();
 }
@@ -994,6 +1027,7 @@ function clickTask(t){
   if(has(t.id)){toast('這個任務執行中，要改派請先在人員卡按「撤回」');return;}
   const r=t.avail(); if(r!==true){toast(r);return;}
   const ids=[...selected].filter(id=>{const c=crewById(id);return c&&!c.task&&!c.gone;});
+  if(new Set(ids.map(id=>crewById(id).u)).size>1){toast('不同單位的人員不能一起執行同一任務');return;}
   if(!ids.length){toast('先點選待命人員，再點任務');return;}
   if(ids.length<t.min){toast(`「${t.name}」需要 ${t.min} 人`);return;}
   if(ids.length>t.max){toast(`「${t.name}」最多 ${t.max} 人`);return;}
@@ -1017,6 +1051,7 @@ function recallCrew(id){
 function toggleSel(id){
   const c=crewById(id); if(S.over||c.gone) return;
   if(c.task){toast('執行任務中，要改派請先按「撤回」');return;}
+  if(!selected.has(id)&&[...selected].some(i=>crewById(i).u!==c.u)){toast('不同單位的人員不能一起執行任務，請先取消已選的其他單位人員');return;}
   selected.has(id)?selected.delete(id):selected.add(id); renderCrew(); renderScene();
 }
 function reqReinf(){
@@ -1089,6 +1124,10 @@ function tick(){
   }
   const rf=S.sc.reinforce;
   if(S.reinf.req!=null&&!S.reinf.arrived&&S.t>=S.reinf.req+rf.eta){S.reinf.arrived=true;rf.arrive();}
+  for(const p of [...S.sup.pend]) if(S.t>=p.at){
+    S.sup.pend=S.sup.pend.filter(x=>x!==p); S.sup.have.push(p.u); S.crew.push(...unitCrew(p.u));
+    log(`${p.u} 隊（3人）抵達現場，向帶隊官報到。該單位人員獨立作業，不能與其他單位混編。`,'good');
+  }
   if(S.crew[0].task) S.ck.cmdBusy++;
   if(S.crew.some(c=>c.inside&&!c.gone)){
     const outN=S.crew.filter(c=>!c.gone&&!c.inside).length;
@@ -1105,9 +1144,10 @@ function renderTop(){
   $('#clock').innerHTML=`T+${fmt(S.t)}<small>${S.mode==='exam'?'考核':'練習'}${S.paused?'｜已暫停':''}</small>`;
   const r=S.reinf, rf=S.sc.reinforce;
   const rTxt=r.req==null?'未請求':r.arrived?'已到場':`約 ${fmt(Math.max(0,r.req+rf.eta-S.t))}`;
-  $('#gauges').innerHTML=[...S.sc.gauges(), `增援 <b>${rTxt}</b>`, `救護車 <b>${S.amb>0?S.amb+' 輛在場':'已後送'}</b>`].map(g=>`<span>${g}</span>`).join('');
+  $('#gauges').innerHTML=[...S.sc.gauges(), `增援 <b>${rTxt}</b>`, ...(S.sup.pend.length?[`支援單位 <b>${S.sup.pend.map(p=>p.u+'隊 '+fmt(Math.max(0,p.at-S.t))).join('、')}</b>`]:[]), `救護車 <b>${S.amb>0?S.amb+' 輛在場':'已後送'}</b>`].map(g=>`<span>${g}</span>`).join('');
   $('#bPause').style.display=S.mode==='exam'?'none':'';
   $('#bPause').textContent=S.paused?'繼續':'暫停';
+  const sl=supLeft().length; $('#bSup').textContent=sl?`呼叫支援單位（剩 ${sl}）`:'支援單位已調派'; $('#bSup').disabled=!sl||S.over;
   $('#bSound').textContent=`提示音：${soundOn?'開':'關'}`;
   document.querySelectorAll('[data-sp]').forEach(b=>b.classList.toggle('on',+b.dataset.sp===S.speed));
 }
@@ -1131,7 +1171,7 @@ function renderCrew(){
   if(box.dataset.n!==String(S.crew.length)){
     box.innerHTML='';
     S.crew.forEach(c=>{
-      const d=document.createElement('div');d.className='crew'+(c.cmd?' cmd':'');d.dataset.id=c.id;d.tabIndex=0;d.setAttribute('role','button');
+      const d=document.createElement('div');d.className='crew'+(c.cmd?' cmd':'');d.dataset.id=c.id;d.dataset.u=c.u;d.tabIndex=0;d.setAttribute('role','button');
       d.innerHTML=`<div class="cav">${c.ab}</div><div class="cinfo"><b>${c.name}</b><span class="cst"></span><div class="air"><i></i></div></div><button class="recall" type="button">撤回</button>`;
       d.onclick=()=>toggleSel(c.id);
       d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleSel(c.id);}};
@@ -1274,9 +1314,10 @@ function showAAR(){
     ${items.map(i=>`<div class="ck">${icon(i[1])}<div><b>${i[0]}</b>：${i[2]}</div><small>${i[3]}</small></div>`).join('')}
     <h2>時間軸</h2>
     <div class="tl">${[...S.log].reverse().map(l=>`<div><time>T+${fmt(l.t)}</time>${l.msg}</div>`).join('')}</div>
-    <div class="row"><button class="btn go" id="bAgain" type="button">再演練一次</button><button class="btn" id="bSetup" type="button">換情境</button><button class="btn" id="bClose" type="button">回到現場畫面</button><button class="btn" id="bImg" type="button">儲存報告圖片</button><button class="btn" id="bResend" type="button">重新上傳</button></div>`;
+    <div class="row"><button class="btn go" id="bAgain" type="button">再演練一次</button><button class="btn" id="bSetup" type="button">換情境</button><button class="btn" id="bClose" type="button">回到現場畫面</button><button class="btn" id="bImg" type="button">儲存報告圖片</button><button class="btn" id="bResend" type="button">重新上傳</button><button class="btn" id="bFbAar" type="button">意見回饋</button></div>`;
+  $('#bFbAar').onclick=openFb;
   $('#aar').classList.add('show');
-  $('#bAgain').onclick=()=>startGame(S.sc.id,S.n,S.mode);
+  $('#bAgain').onclick=()=>startGame(S.sc.id,S.n,S.mode,S.extra);
   $('#bSetup').onclick=()=>{$('#aar').classList.remove('show');$('#start').classList.add('show');};
   $('#bClose').onclick=()=>$('#aar').classList.remove('show');
   $('#bResend').onclick=()=>{S.sent=false;sendAAR(items);};
@@ -1286,12 +1327,12 @@ function showAAR(){
 async function sendAAR(items){
   const st=$('#sendStatus'); if(!st) return;
   if(!GAS_URL){st.textContent='尚未設定 Google Sheets 網址，本次結果未上傳。';return;}
-  if(S.t<20){st.textContent='演練時間過短，未上傳。';return;}
+  if(S.t<240){st.textContent='操作未達 4 分鐘，本次結果不上傳後台。';return;}
   if(S.sent){st.textContent='✓ 本次結果已上傳。';return;}
   const c=S.ck;
   const payload={
     runId:S.runId, name:S.tester.name, unit:S.tester.unit, scenario:`${S.sc.id} ${S.sc.title}`,
-    crew:S.n, mode:S.mode, reason:S.endReason, duration:S.t,
+    crew:S.n, extraUnits:S.extra, mode:S.mode, reason:S.endReason, duration:S.t,
     saved:S.victims.filter(v=>(v.status==='out'||v.status==='transported')&&v.hp>0).length, total:S.victims.length,
     victims:S.victims.map(v=>({name:v.name,status:stTxt(v)+(v.status==='dead'?'':`（${hpTxt(v.hp)}）`)})),
     flashover:(S.sc.id==='S001'&&M.ck.flashover!=null)?M.ck.flashover:null, mayday:c.mayday,
@@ -1334,7 +1375,7 @@ function aarCanvas(items){
   y+=34;
 
   const info=[['受訓人員',`${S.tester.name||'未填'}${S.tester.unit?'（'+S.tester.unit+'）':''}`],['演練日期',dstr],['情境代碼',S.sc.id],
-    ['出勤人數',`${S.n} 人`],['模式',S.mode==='exam'?'考核':'練習'],['演練時間',`T+${fmt(S.t)}`]];
+    ['出勤人數',`${S.n} 人${S.extra?`＋支援 ${S.extra} 個單位`:''}`],['模式',S.mode==='exam'?'考核':'練習'],['演練時間',`T+${fmt(S.t)}`]];
   const colW=(W-P*2)/3;
   info.forEach((it,i)=>{const x=P+(i%3)*colW, yy=y+Math.floor(i/3)*82; text(it[0],x,yy,20,'#5b6672',600); wrap(it[1],x,yy+28,colW-20,27,34,'#16202a',700);});
   y+=82*2+6;
@@ -1406,6 +1447,37 @@ async function shareAARImage(){
   catch(e){ if(e.name!=='AbortError') toast('分享失敗，請改用下載'); }
 }
 
+/* ---------- 意見回饋 ---------- */
+let fbHeld=false;
+function openFb(){
+  if(S&&!S.over&&!S.choiceOpen){S.choiceOpen=true;fbHeld=true;}
+  $('#fbSc').value=(S&&S.t>0)?S.sc.id:'整體';
+  $('#fbStatus').textContent=''; $('#bFbSend').disabled=false;
+  $('#fb').classList.add('show');
+}
+function closeFb(){
+  $('#fb').classList.remove('show');
+  if(fbHeld&&S){S.choiceOpen=false;fbHeld=false;}
+}
+async function sendFb(){
+  const st=$('#fbStatus'), g=id=>$(id).value.trim();
+  const d={type:'feedback', fbId:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name:$('#optName').value.trim()||'未填', unit:$('#optUnit').value.trim(), scenario:g('#fbSc'),
+    real:g('#fbReal'), diff:g('#fbDiff'), timing:g('#fbTime'), bad:g('#fbBad'), sug:g('#fbSug'),
+    runId:(S&&S.t>0)?S.runId:'', mode:(S&&S.t>0)?S.mode:''};
+  if(!d.real&&!d.diff&&!d.timing&&!d.bad&&!d.sug){st.textContent='請至少填寫一個欄位。';return;}
+  if(!GAS_URL){st.textContent='尚未設定 Google Sheets 網址，無法送出。';return;}
+  const opt={method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)};
+  st.textContent='送出中…'; $('#bFbSend').disabled=true;
+  let ok=false;
+  try{const r=await fetch(GAS_URL,opt);const j=await r.json();if(!j.ok)throw new Error(j.error);ok=true;}
+  catch(e){try{await fetch(GAS_URL,{...opt,mode:'no-cors'});ok=true;}catch(e2){}}
+  if(ok){st.textContent='✓ 已送出，謝謝你的意見。';['#fbReal','#fbDiff','#fbTime','#fbBad','#fbSug'].forEach(i=>$(i).value='');}
+  else{st.textContent='送出失敗，請確認網路後再按一次。';}
+  $('#bFbSend').disabled=false;
+}
+$('#bFb').onclick=openFb; $('#bFbSend').onclick=sendFb; $('#bFbClose').onclick=closeFb; $('#bFbStart').onclick=openFb;
+
 /* ---------- 啟動 ---------- */
 function setSpeed(x){S.speed=x;clearInterval(timer);timer=setInterval(tick,1000/x);renderTop();}
 function renderScList(){
@@ -1413,25 +1485,31 @@ function renderScList(){
   document.querySelectorAll('.sc').forEach(b=>b.onclick=()=>{selSc=b.dataset.sc;renderScList();});
   $('#briefTxt').textContent=SC[selSc].brief;
 }
-function startGame(scId,n,mode){
-  scId=scId||selSc; n=n||+$('#optCrew').value; mode=mode||$('#optMode').value;
+function startGame(scId,n,mode,extra){
+  scId=scId||selSc; n=n||+$('#optCrew').value; mode=mode||$('#optMode').value; extra=extra==null?+$('#optExtra').value:extra;
   const nm=$('#optName').value.trim(), un=$('#optUnit').value.trim();
   if(GAS_URL&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
   try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));}catch(e){}
   clearInterval(timer); alertQ.length=0; nextAlert();
-  newState(scId,n,mode); selected.clear(); curZone=S.sc.zones[0];
+  newState(scId,n,mode,extra); selected.clear(); curZone=S.sc.zones[0];
   S.tester={name:nm||'未填',unit:un};
   $('#crew').dataset.n=''; buildTasks(); buildReportForm();
   $('#scTitle').innerHTML=`${S.sc.title} <span>${S.sc.hint}</span>`;
   document.title=`${S.sc.title}｜消防指揮情境訓練`;
   ['#start','#aar','#report','#choice','#feedSheet','#imgSheet'].forEach(id=>$(id).classList.remove('show'));
   log(S.sc.arrival(n),'radio');
+  if(extra) log(`同時抵達：${['A','B'].slice(0,extra).map(u=>u+'隊（3人）').join('、')}。各單位人員獨立作業，不能跨單位編組。`,'radio');
   render(); setSpeed(1);
   if(S.sc.onStart) S.sc.onStart();
 }
 
+function renderEx(){const n=+$('#optExtra').value;$('#exTxt').textContent=n?`本隊＋${['A','B'].slice(0,n).join('、')} 隊（共 ${n+1} 個單位）`:'只有本隊';$('#bExM').disabled=n<=0;$('#bExP').disabled=n>=2;}
+$('#bExM').onclick=()=>{$('#optExtra').value=Math.max(0,+$('#optExtra').value-1);renderEx();};
+$('#bExP').onclick=()=>{$('#optExtra').value=Math.min(2,+$('#optExtra').value+1);renderEx();};
+renderEx();
 renderScList();
 try{const t=JSON.parse(localStorage.getItem('fgc_tester')||'null');if(t){$('#optName').value=t.nm||'';$('#optUnit').value=t.un||'';}}catch(e){}
+$('#bSup').onclick=callSupport;
 $('#bStart').onclick=()=>{beep();startGame();};
 $('#bSendReport').onclick=sendReport;
 $('#bCancelReport').onclick=()=>$('#report').classList.remove('show');
