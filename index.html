@@ -927,7 +927,7 @@ const S003 = {
       if(d.hp<=0){d.hp=0;d.status='dead';d.deadAt=S.t;log('槽車駕駛失去生命徵象。','alert');}
     }
   },
-  endCheck(){ if(V('drv').status!=='trapped'&&M.plug&&!M.fire&&M.cov>=60) return '已止漏、油池已覆蓋，駕駛已處置'; },
+  endCheck(){ if(V('drv').status!=='trapped'&&M.plug&&!M.fire&&M.cov>=60) return '已關閉緊急停止開關、油池已覆蓋，駕駛已處置'; },
   bx(){ return M.staging==='near'?272:M.staging==='far'?14:96; },
   idle(){ return [this.bx()+20,136]; },
   pos(a){
@@ -976,7 +976,7 @@ const S003 = {
       ['進入熱區前完成辨識', hot?!c.noIdent:null, c.noIdent?'未辨識即進入':'是', '不知道是什麼物質，就不知道要穿什麼、站多遠。'],
       ['泡沫覆蓋後才進入救人', c.rescue==null&&!c.entryNoFoam?null:!c.entryNoFoam, c.entryNoFoam?'覆蓋不足即進入':c.rescue!=null?'是':'—', '先壓制油氣再進去救人，避免救援人員變成第二批受困者。'],
       ['防止油品流入排水溝', c.drainSpill==null, c.drainSpill==null?'未流入':`${ft(c.drainSpill)} 流入排水溝`, '築堤和封堵水溝要趁油池還小時做，流進海裡就是另一場災難。'],
-      ['完成止漏', c.plug!=null, ft(c.plug), '止漏後油池不再擴大，泡沫覆蓋才守得住。'],
+      ['關閉緊急停止開關', c.plug!=null, ft(c.plug), '關閉後槽車不再出油，油池不再擴大，泡沫覆蓋才守得住。'],
       ['未發生起火', c.ignition==null, c.ignition?`T+${fmt(c.ignition.t)} ${c.ignition.src}`:'未起火', '控制火源（車輛、人車、民宅）和泡沫覆蓋是防止起火的兩道防線。'],
       ['熱區作業時場外至少 2 人', S.ck.minOut==null?null:S.ck.minOut>=2, S.ck.minOut==null?'無人進入熱區':`熱區作業期間場外最少 ${S.ck.minOut} 人`, '熱區作業要有後援與 RIT 待命。'],
       ['成立 RIT', S.ck.rit!=null, ft(S.ck.rit), '進入熱區前要有人能把你拉出來。'],
@@ -1017,9 +1017,9 @@ S003.tasks = [
    hidden:()=>!M.tanker, avail:()=>true, done:()=>{M.water+=8000;M.tanker=false;log('水庫車補水 8,000 公升。');}},
   hot3({id:'dike', zone:'熱區作業', name:'築堤圍堵、封堵排水溝', min:2,max:2, dur:120, desc:'防止油品流入水溝',
    avail:()=>M.dike?'已完成':M.fire?'起火中':true, start:entry3, done:()=>{M.dike=true;M.ck.dike=S.t;log('已築堤圍堵並封堵排水溝入口。');}}),
-  hot3({id:'plug', zone:'熱區作業', name:'槽體破口止漏', min:2,max:2, dur:150, desc:'以木楔、堵漏膠泥止漏',
+  hot3({id:'plug', zone:'熱區作業', name:'關閉緊急停止開關', min:2,max:2, dur:150, desc:'關閉槽車緊急停止開關，截斷出油',
    avail:()=>M.plug?'已完成':M.fire?'起火中':true, start:entry3,
-   done:()=>{M.plug=true;M.leak=S003.P.leakPlug;M.ck.plug=S.t;log('槽體破口止漏完成，洩漏量大幅降低。','good');}}),
+   done:()=>{M.plug=true;M.leak=S003.P.leakPlug;M.ck.plug=S.t;log('槽車緊急停止開關已關閉，洩漏量大幅降低。','good');}}),
   hot3({id:'rescueDrv', zone:'熱區作業', name:'破壞駕駛室救出駕駛', min:2,max:2, dur:180, desc:'',
    avail:()=>V('drv').status!=='trapped'?'已救出':M.fire?'起火中，無法接近':true,
    start:()=>{entry3();if(M.cov<60){M.ck.entryNoFoam=true;log('泡沫尚未覆蓋油池即進入熱區救人！','alert');}},
