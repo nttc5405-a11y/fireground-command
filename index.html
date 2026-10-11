@@ -1392,6 +1392,25 @@ function showAAR(){
   $('#bImg').onclick=()=>showAARImage(items);
   sendAAR(items);
 }
+/* 上傳到 GAS：錯開時間、失敗自動重試；只有真的收到成功回應才算成功（後台以編號去重，重送是安全的） */
+const sleepMs = ms => new Promise(r=>setTimeout(r,ms));
+async function postGAS(payload, onStatus, jitterMax){
+  const opt={method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)};
+  if(jitterMax){ onStatus('排隊上傳中，請稍候…'); await sleepMs(Math.random()*jitterMax); }
+  const waits=[0,2500,6000,12000];
+  for(let i=0;i<waits.length;i++){
+    if(i>0){ onStatus(`後台忙碌，${Math.round(waits[i]/1000)} 秒後重試（第 ${i+1} 次）…`); await sleepMs(waits[i]+Math.random()*2000); }
+    else onStatus('上傳中…');
+    try{
+      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),75000);
+      const r=await fetch(GAS_URL,{...opt,signal:ctl.signal}); clearTimeout(to);
+      const j=await r.json();
+      if(j.ok) return {ok:true,dup:!!j.dup};
+    }catch(e){}
+  }
+  try{ await fetch(GAS_URL,{...opt,mode:'no-cors'}); }catch(e){}   // 最後再送一次（無法確認回應）
+  return {ok:false};
+}
 async function sendAAR(items){
   const st=$('#sendStatus'); if(!st) return;
   if(!GAS_URL){st.textContent='尚未設定 Google Sheets 網址，本次結果未上傳。';return;}
@@ -1408,16 +1427,10 @@ async function sendAAR(items){
     passCount:items.filter(i=>i[1]===true).length, checkCount:items.filter(i=>i[1]!==null).length,
     log:[...S.log].reverse()
   };
-  const body=JSON.stringify(payload), opt={method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body};
-  st.textContent='上傳中…';
-  try{
-    const r=await fetch(GAS_URL,opt); const j=await r.json();
-    if(!j.ok) throw new Error(j.error||'寫入失敗');
-    S.sent=true; st.textContent=j.dup?'✓ 此紀錄先前已上傳。':'✓ 已上傳到 Google Sheets。';
-  }catch(e){
-    try{ await fetch(GAS_URL,{...opt,mode:'no-cors'}); S.sent=true; st.textContent='已送出（瀏覽器無法確認回應，請到試算表確認）。'; }
-    catch(e2){ st.textContent='上傳失敗，請確認網路後按「重新上傳」。'; }
-  }
+  const res=await postGAS(payload, m=>{const e=$('#sendStatus'); if(e) e.textContent=m;}, 8000);
+  const e2=$('#sendStatus'); if(!e2) return;
+  if(res.ok){ S.sent=true; e2.textContent=res.dup?'✓ 此紀錄先前已上傳。':'✓ 已上傳到 Google Sheets。'; }
+  else e2.textContent='⚠ 尚未確認上傳成功（後台忙碌或網路不穩）。請稍後按「重新上傳」，重複上傳不會產生重複紀錄。';
 }
 
 /* ---------- AAR 報告圖片 ---------- */
@@ -1516,7 +1529,7 @@ async function shareAARImage(){
 }
 
 /* ---------- 意見回饋 ---------- */
-let fbHeld=false;
+let fbHeld=false, fbIdCur=null;
 function openFb(){
   if(S&&!S.over&&!S.choiceOpen){S.choiceOpen=true;fbHeld=true;}
   $('#fbSc').value=(S&&S.t>0)?S.sc.id:'整體';
@@ -1529,19 +1542,16 @@ function closeFb(){
 }
 async function sendFb(){
   const st=$('#fbStatus'), g=id=>$(id).value.trim();
-  const d={type:'feedback', fbId:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+  const d={type:'feedback', fbId:(fbIdCur=fbIdCur||Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     name:$('#optName').value.trim()||'未填', unit:$('#optUnit').value.trim(), scenario:g('#fbSc'),
     real:g('#fbReal'), diff:g('#fbDiff'), timing:g('#fbTime'), bad:g('#fbBad'), sug:g('#fbSug'),
     runId:(S&&S.t>0)?S.runId:'', mode:(S&&S.t>0)?S.mode:''};
   if(!d.real&&!d.diff&&!d.timing&&!d.bad&&!d.sug){st.textContent='請至少填寫一個欄位。';return;}
   if(!GAS_URL){st.textContent='尚未設定 Google Sheets 網址，無法送出。';return;}
-  const opt={method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)};
   st.textContent='送出中…'; $('#bFbSend').disabled=true;
-  let ok=false;
-  try{const r=await fetch(GAS_URL,opt);const j=await r.json();if(!j.ok)throw new Error(j.error);ok=true;}
-  catch(e){try{await fetch(GAS_URL,{...opt,mode:'no-cors'});ok=true;}catch(e2){}}
-  if(ok){st.textContent='✓ 已送出，謝謝你的意見。';['#fbReal','#fbDiff','#fbTime','#fbBad','#fbSug'].forEach(i=>$(i).value='');}
-  else{st.textContent='送出失敗，請確認網路後再按一次。';}
+  const res=await postGAS(d, m=>{st.textContent=m;}, 0);
+  if(res.ok){fbIdCur=null;st.textContent='✓ 已送出，謝謝你的意見。';['#fbReal','#fbDiff','#fbTime','#fbBad','#fbSug'].forEach(i=>$(i).value='');}
+  else{st.textContent='⚠ 尚未確認送出成功，請稍後再按一次「送出回饋」（重複送出不會產生重複紀錄）。';}
   $('#bFbSend').disabled=false;
 }
 $('#bFb').onclick=openFb; $('#bFbSend').onclick=sendFb; $('#bFbClose').onclick=closeFb; $('#bFbStart').onclick=openFb;
