@@ -264,7 +264,7 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
       <div><label for="optMode">模式</label><select id="optMode"><option value="practice">練習：可暫停、可加速</option><option value="exam">考核：不可暫停</option></select></div>
     </div>
     <p class="hint" style="margin-top:12px">操作：先點選待命人員，再點任務。灰色任務點下去會說明現在為什麼不能做。指揮類動作不需要選人。</p>
-    <div class="row"><button class="btn" id="bIntro" type="button">▶ 觀看開場影片（30 秒）</button></div>
+    <div class="row"><button class="btn" id="bIntro" type="button">▶ 觀看開場影片（約 55 秒）</button></div>
     <video id="introVid" controls playsinline preload="none" poster="intro-poster.png" src="intro.mp4" style="display:none;width:100%;margin-top:10px;border-radius:4px;background:#000"></video>
     <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button><button class="btn" id="bFbStart" type="button">意見回饋</button></div>
   </div>
@@ -1159,7 +1159,7 @@ function tick(){
   if(S.reinf.req!=null&&!S.reinf.arrived&&S.t>=S.reinf.req+rf.eta){S.reinf.arrived=true;rf.arrive();}
   for(const p of [...S.sup.pend]) if(S.t>=p.at){
     S.sup.pend=S.sup.pend.filter(x=>x!==p); S.sup.have.push(p.u); S.crew.push(...unitCrew(p.u,S.sizes[p.u]));
-    log(`${p.u} 隊（${S.sizes[p.u]}人）抵達現場，向帶隊官報到。該單位人員獨立作業，不能與其他單位混編。`,'good');
+    log(`${p.u} 隊（${S.sizes[p.u]}人）抵達現場，向帶隊官報到。各單位不併組作業。`,'good');
   }
   if(S.crew[0].task) S.ck.cmdBusy++;
   if(S.crew.some(c=>c.inside&&!c.gone)){
@@ -1567,7 +1567,7 @@ function startGame(scId,n,mode,extra,sizes){
   document.title=`${S.sc.title}｜消防指揮情境訓練`;
   ['#start','#aar','#report','#choice','#feedSheet','#imgSheet'].forEach(id=>$(id).classList.remove('show'));
   log(S.sc.arrival(n),'radio');
-  if(extra) log(`同時抵達：${['A','B'].slice(0,extra).map(u=>u+'隊（'+sizes[u]+'人）').join('、')}。各單位人員獨立作業，不能跨單位編組。`,'radio');
+  if(extra) log(`同時抵達：${['A','B'].slice(0,extra).map(u=>u+'隊（'+sizes[u]+'人）').join('、')}。各單位不併組作業。`,'radio');
   render(); setSpeed(1);
   if(S.sc.onStart) S.sc.onStart();
 }
