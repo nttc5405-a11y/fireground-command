@@ -283,6 +283,7 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
         <div id="exSizes" style="display:none;gap:8px;margin-top:6px"><div style="flex:1"><label for="optSzA">A 隊人數（含隊長）</label><select id="optSzA"><option>3</option><option>4</option><option>5</option><option>6</option></select></div><div style="flex:1" id="szBwrap"><label for="optSzB">B 隊人數（含隊長）</label><select id="optSzB"><option>3</option><option>4</option><option>5</option><option>6</option></select></div></div></div>
       <div><label for="optMode">模式</label><select id="optMode"><option value="practice">練習：可暫停、可加速</option><option value="exam">考核：不可暫停</option></select></div>
     </div>
+    <details id="verBox" style="margin-top:12px"><summary><b>版本 <span id="verTxt"></span></b>｜點開查看更新內容</summary><div id="verLog"></div></details>
     <p class="hint" style="margin-top:12px">操作：先點選待命人員，再點任務。灰色任務點下去會說明現在為什麼不能做。指揮類動作不需要選人。</p>
     <div class="row"><button class="btn" id="bIntro" type="button">▶ 觀看開場影片（約 55 秒）</button></div>
     <video id="introVid" controls playsinline preload="none" poster="intro-poster.png" src="intro.mp4" style="display:none;width:100%;margin-top:10px;border-radius:4px;background:#000"></video>
@@ -359,6 +360,22 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 /* ================= 共用設定 ================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec';   // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
 const AIR = 900, AIR_WARN = 300;
+const VERSION = '2026.10.13';
+const CHANGELOG = [
+  {v:'2026.10.13', items:[
+    '新資訊（無線電、到場、任務完成）會在畫面右上角跳出提示，約 4 秒後消失，不影響操作。',
+    '車禍情境：新增「確認電動座椅可否後移」與「熄火」。熄火或斷電前先確認座椅，可縮短解困時間。',
+    '槽車情境：加入泡沫量計算。車上只有 4 桶原液、水箱 1,500＋3,000 公升；新增「估算油池面積與泡沫需求量」任務；1 支瞄子只能顧約 30 平方公尺，要算清楚幾支、幾桶、幾噸水。',
+    '槽車情境：結果畫面新增「延伸閱讀」連結，可查閱槽車圖卡與泡沫計算。',
+    '事後檢討新增檢核點：估算泡沫需求量、泡沫施放未中斷、座椅確認提醒（不計分）。',
+    '後台分析改為依版本區分，改版前後的成績不混在一起計算。']},
+  {v:'2026.10.12 以前', items:[
+    '可增派 A、B 支援單位（開始前選擇或演練中呼叫），各單位不併組作業；本隊與支援單位人數 3–6 人可調。',
+    '手機版人員改為單位分頁，並新增「選 2 人／選 3 人／全選待命」快速鍵。',
+    '新增意見回饋單；結果上傳加入自動重試。',
+    '槽車情境「止漏」改為「關閉緊急停止開關」。',
+    '預設白天高對比；新增網站圖示與開場影片；操作未達 4 分鐘不上傳後台。']}
+];
 
 const $ = s => document.querySelector(s);
 let S = null, M = null, timer = null, toastT = null, curZone = null, selSc = 'S001';
@@ -1426,7 +1443,7 @@ function showAAR(){
   const saved=S.victims.filter(v=>(v.status==='out'||v.status==='transported')&&v.hp>0).length;
   const icon=x=>x===true?'<span class="ic pass">✓</span>':x===false?'<span class="ic fail">✕</span>':'<span class="ic na">－</span>';
   $('#aarBody').innerHTML=`
-    <h1>事後檢討（AAR）</h1>
+    <h1>事後檢討（AAR）</h1><p class="hint">遊戲版本 v${VERSION}</p>
     <p><b>${S.sc.title}</b>｜${S.endReason}｜演練時間 T+${fmt(S.t)}｜救出 ${saved} / ${S.victims.length} 人${c.mayday?`｜T+${fmt(c.mayday.t)} MAYDAY`:''}</p>
     <p class="hint" id="sendStatus"></p>
     <h2>傷患／受困者</h2>
@@ -1472,7 +1489,7 @@ async function sendAAR(items){
   if(S.sent){st.textContent='✓ 本次結果已上傳。';return;}
   const c=S.ck;
   const payload={
-    runId:S.runId, name:S.tester.name, unit:S.tester.unit, scenario:`${S.sc.id} ${S.sc.title}`,
+    ver:VERSION, runId:S.runId, name:S.tester.name, unit:S.tester.unit, scenario:`${S.sc.id} ${S.sc.title}`,
     crew:S.n, extraUnits:S.extra, unitSizes:S.extra?['A','B'].slice(0,S.extra).map(u=>u+S.sizes[u]).join(','):'', mode:S.mode, reason:S.endReason, duration:S.t,
     saved:S.victims.filter(v=>(v.status==='out'||v.status==='transported')&&v.hp>0).length, total:S.victims.length,
     victims:S.victims.map(v=>({name:v.name,status:stTxt(v)+(v.status==='dead'?'':`（${hpTxt(v.hp)}）`)})),
@@ -1596,7 +1613,7 @@ function closeFb(){
 }
 async function sendFb(){
   const st=$('#fbStatus'), g=id=>$(id).value.trim();
-  const d={type:'feedback', fbId:(fbIdCur=fbIdCur||Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
+  const d={type:'feedback', ver:VERSION, fbId:(fbIdCur=fbIdCur||Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     name:$('#optName').value.trim()||'未填', unit:$('#optUnit').value.trim(), scenario:g('#fbSc'),
     real:g('#fbReal'), diff:g('#fbDiff'), timing:g('#fbTime'), bad:g('#fbBad'), sug:g('#fbSug'),
     runId:(S&&S.t>0)?S.runId:'', mode:(S&&S.t>0)?S.mode:''};
@@ -1621,7 +1638,7 @@ function startGame(scId,n,mode,extra,sizes){
   scId=scId||selSc; n=n||+$('#optCrew').value; mode=mode||$('#optMode').value; extra=extra==null?+$('#optExtra').value:extra; sizes=sizes||{A:+$('#optSzA').value,B:+$('#optSzB').value};
   const nm=$('#optName').value.trim(), un=$('#optUnit').value.trim();
   if(GAS_URL&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
-  try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));}catch(e){}
+  try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));localStorage.setItem('fgc_ver',VERSION);}catch(e){}
   try{$('#introVid').pause();}catch(e){}
   clearInterval(timer); alertQ.length=0; nextAlert(); $('#tips').innerHTML='';
   newState(scId,n,mode,extra,sizes); selected.clear(); curUnit='own'; curZone=S.sc.zones[0];
@@ -1640,6 +1657,11 @@ function renderEx(){const n=+$('#optExtra').value;$('#exTxt').textContent=n?`本
 $('#bExM').onclick=()=>{$('#optExtra').value=Math.max(0,+$('#optExtra').value-1);renderEx();};
 $('#bExP').onclick=()=>{$('#optExtra').value=Math.min(2,+$('#optExtra').value+1);renderEx();};
 renderEx();
+(function(){
+  $('#verTxt').textContent='v'+VERSION;
+  $('#verLog').innerHTML=CHANGELOG.map(c=>`<h2 style="font-size:14px;margin:10px 0 4px">${c.v}</h2><ul style="margin:0 0 6px;padding-left:20px;font-size:13.5px">${c.items.map(i=>`<li>${i}</li>`).join('')}</ul>`).join('');
+  try{ if(localStorage.getItem('fgc_ver')!==VERSION){ $('#verBox').open=true; $('#verTxt').insertAdjacentHTML('afterend',' <span style="background:#c8102e;color:#fff;border-radius:3px;padding:0 5px;font-size:11px;vertical-align:1px">新版</span>'); } }catch(e){}
+})();
 renderScList();
 try{const t=JSON.parse(localStorage.getItem('fgc_tester')||'null');if(t){$('#optName').value=t.nm||'';$('#optUnit').value=t.un||'';}}catch(e){}
 $('#bSup').onclick=callSupport;
