@@ -378,8 +378,11 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 /* ================= 共用設定 ================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec';   // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
 const AIR = 900, AIR_WARN = 300;
-const VERSION = '2026.10.13c';
+const VERSION = '2026.10.13d';
 const CHANGELOG = [
+  {v:'2026.10.13d', items:[
+    '任務被撤回後重新派人時，已完成的進度會保留（例如做了 60 秒才改派，不會從頭計時），剩餘時間依新的人力換算。',
+  ]},
   {v:'2026.10.13c', items:['新增情境 S004：餐廳後廚 LPG 外洩（氣體偵測、點火源管制、台電斷電、關閥與搬移鋼瓶、水霧稀釋）。']},
   {v:'2026.10.13b', items:[
     '開始畫面改為兩步驟：先看三個情境（附縮圖與簡介）並點選，再填姓名、單位與出勤設定。',
@@ -1444,9 +1447,12 @@ function clickTask(t){
   if(ids.length>t.max){toast(`「${t.name}」最多 ${t.max} 人`);return;}
   const a={key:++S.seq, def:t, crew:ids, start:S.t};
   a.total = t.dur==null?null:(typeof t.dur==='function'?t.dur(a):t.dur); a.left=a.total;
+  /* 同一任務先前被撤回時，已完成的進度保留；剩餘工作量依新的人力重新換算 */
+  const pf=S.prog&&S.prog[t.id];
+  if(pf&&a.total!=null){ a.pf=pf; a.total=Math.max(1,Math.round(a.total*(1-pf))); a.left=a.total; delete S.prog[t.id]; }
   S.active.push(a);
   ids.forEach(id=>{const c=crewById(id);c.task=a.key;c.inside=!!t.idlh;});
-  log(`${names(ids)}：${t.name}`,'cmd');
+  log(`${names(ids)}：${t.name}${a.pf?`（延續先前已完成的 ${Math.round(a.pf*100)}%，剩約 ${a.total} 秒）`:''}`,'cmd');
   if(t.start) t.start(a);
   selected.clear(); render();
 }
@@ -1456,6 +1462,7 @@ function removeActive(a){
 }
 function recallCrew(id){
   const c=crewById(id); const a=S.active.find(x=>x.key===c.task); if(!a) return;
+  if(a.total!=null&&a.total>0&&a.left>0){ const f=(a.pf||0)+(1-(a.pf||0))*(1-a.left/a.total); if(f>0.03) (S.prog=S.prog||{})[a.def.id]=Math.min(0.95,f); }
   removeActive(a); if(a.def.cancel) a.def.cancel();
   log(`${a.def.name}中止，${names(a.crew)}撤回待命`,'cmd'); render();
 }
@@ -1519,7 +1526,7 @@ function tick(){
   if(!S||S.over||S.paused||S.choiceOpen) return;
   S.t++;
   for(const a of [...S.active]){
-    if(a.total!=null){a.left--; if(a.left<=0){removeActive(a); S.tipFlag=false; if(a.def.done) a.def.done(a); if(S.over) return; if(!S.tipFlag) pushTip(`✓ 完成：${names(a.crew)}：${a.def.name}`,'good');}}
+    if(a.total!=null){a.left--; if(a.left<=0){removeActive(a); if(S.prog) delete S.prog[a.def.id]; S.tipFlag=false; if(a.def.done) a.def.done(a); if(S.over) return; if(!S.tipFlag) pushTip(`✓ 完成：${names(a.crew)}：${a.def.name}`,'good');}}
   }
   S.sc.tick(); if(S.over) return;
   for(const v of S.victims){
