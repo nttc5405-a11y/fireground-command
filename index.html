@@ -161,6 +161,16 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .sc b{display:block;font-size:15px;line-height:1.35}
 .sc small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
 .sc .tag{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:var(--ink);padding:1px 7px;border-radius:3px;margin-bottom:5px}
+.sheet.wide{max-width:900px}
+.sclist.big{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.sclist.big .sc{padding:14px}
+.sclist.big .sc b{font-size:17px}
+.sclist.big .thumb{display:block;width:100%;height:auto;border-radius:3px;border:1px solid var(--line);margin-bottom:10px;background:var(--chip)}
+.sclist.big .sc p{font-size:13.5px;line-height:1.55;margin:8px 0 0;color:var(--ink)}
+.sclist.big .sc:hover{border-color:var(--red)}
+.selsc{border-left:5px solid var(--red);background:color-mix(in srgb,var(--red) 7%,var(--panel));padding:10px 12px;margin:10px 0;border-radius:3px}
+.selsc .tag{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:var(--red);padding:1px 7px;border-radius:3px;margin-right:6px}
+.selsc p{margin:6px 0 0;font-size:13.5px}
 .sc.on{border-color:var(--red);background:color-mix(in srgb,var(--red) 7%,var(--panel))}
 .sc.on .tag{background:var(--red)}
 .choices{display:flex;flex-direction:column;gap:8px;margin-top:14px}
@@ -270,11 +280,17 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 </main>
 
 <div class="overlay show" id="start">
-  <div class="sheet">
+  <div class="sheet wide" id="startSheet">
     <h1>消防指揮情境訓練</h1>
     <p>你是第一梯次帶隊官。到場後時間就開始流動，狀況會自己惡化，所有決定都會被記錄，結束後產生事後檢討（AAR）。</p>
-    <div class="sclist" id="sclist"></div>
-    <p id="briefTxt"></p>
+    <div id="stepPick">
+    <h2>第一步：選擇情境</h2>
+    <div class="sclist big" id="sclist"></div>
+    </div>
+    <div id="stepSet" style="display:none">
+    <button class="btn" id="bBack" type="button">← 重新選擇情境</button>
+    <div class="selsc" id="selSc"></div>
+    <h2>第二步：填寫資料與出勤設定</h2>
     <div class="two">
       <div><label for="optName">姓名</label><input id="optName" autocomplete="name" placeholder="例：王小明"></div>
       <div><label for="optUnit">單位</label><input id="optUnit" placeholder="例：成功分隊"></div>
@@ -283,11 +299,13 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
         <div id="exSizes" style="display:none;gap:8px;margin-top:6px"><div style="flex:1"><label for="optSzA">A 隊人數（含隊長）</label><select id="optSzA"><option>3</option><option>4</option><option>5</option><option>6</option></select></div><div style="flex:1" id="szBwrap"><label for="optSzB">B 隊人數（含隊長）</label><select id="optSzB"><option>3</option><option>4</option><option>5</option><option>6</option></select></div></div></div>
       <div><label for="optMode">模式</label><select id="optMode"><option value="practice">練習：可暫停、可加速</option><option value="exam">考核：不可暫停</option></select></div>
     </div>
-    <details id="verBox" style="margin-top:12px"><summary><b>版本 <span id="verTxt"></span></b>｜點開查看更新內容</summary><div id="verLog"></div></details>
+    <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button></div>
     <p class="hint" style="margin-top:12px">操作：先點選待命人員，再點任務。灰色任務點下去會說明現在為什麼不能做。指揮類動作不需要選人。</p>
+    </div>
+    <details id="verBox" style="margin-top:12px"><summary><b>版本 <span id="verTxt"></span></b>｜點開查看更新內容</summary><div id="verLog"></div></details>
     <div class="row"><button class="btn" id="bIntro" type="button">▶ 觀看開場影片（約 55 秒）</button></div>
     <video id="introVid" controls playsinline preload="none" poster="intro-poster.png" src="intro.mp4" style="display:none;width:100%;margin-top:10px;border-radius:4px;background:#000"></video>
-    <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button><button class="btn" id="bFbStart" type="button">意見回饋</button></div>
+    <div class="row"><button class="btn" id="bFbStart" type="button">意見回饋</button></div>
   </div>
 </div>
 
@@ -360,8 +378,12 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 /* ================= 共用設定 ================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec';   // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
 const AIR = 900, AIR_WARN = 300;
-const VERSION = '2026.10.13';
+const VERSION = '2026.10.13b';
 const CHANGELOG = [
+  {v:'2026.10.13b', items:[
+    '開始畫面改為兩步驟：先看三個情境（附縮圖與簡介）並點選，再填姓名、單位與出勤設定。',
+    '救護車後送時，正在照護傷患的人員會跟著傷患一起上車離開（原本會留在現場空照護）。',
+  ]},
   {v:'2026.10.13', items:[
     '新資訊（無線電、到場、任務完成）會在畫面右上角跳出提示，約 4 秒後消失，不影響操作。',
     '車禍情境：新增「確認電動座椅可否後移」與「熄火」。熄火或斷電前先確認座椅，可縮短解困時間。',
@@ -435,7 +457,12 @@ const COMMON = {
       S.amb--; if(a.crew.length===1) S.ck.transportSolo=true;
       const out=S.victims.filter(v=>v.status==='out'); out.forEach(v=>v.status='transported');
       a.crew.forEach(id=>{const c=crewById(id);c.gone=true;c.note='隨車後送';});
-      log(`救護車後送 ${out.map(v=>v.name).join('、')}，${names(a.crew)}隨車離開。`,'radio');}},
+      log(`救護車後送 ${out.map(v=>v.name).join('、')}，${names(a.crew)}隨車離開。`,'radio');
+      /* 照護傷患的人員隨傷患上車離開 */
+      S.active.filter(x=>x.def.id==='care').forEach(x=>{
+        removeActive(x);
+        x.crew.forEach(id=>{const c=crewById(id);c.gone=true;c.note='隨傷患後送';});
+        log(`${names(x.crew)}照護中的傷患已上救護車，隨車離開。`,'radio');});}},
 };
 const makeRit = zone => ({id:'rit', zone, name:'成立 RIT 待命', min:2,max:2, dur:null, desc:'持續：快速救援小組',
   avail:()=>true, start:()=>{if(S.ck.rit==null)S.ck.rit=S.t;log('RIT 成立待命。','good');}});
@@ -1630,14 +1657,19 @@ $('#bFb').onclick=openFb; $('#bFbSend').onclick=sendFb; $('#bFbClose').onclick=c
 /* ---------- 啟動 ---------- */
 function setSpeed(x){S.speed=x;clearInterval(timer);timer=setInterval(tick,1000/x);renderTop();}
 function renderScList(){
-  $('#sclist').innerHTML=Object.values(SC).map(sc=>`<button class="sc${sc.id===selSc?' on':''}" type="button" data-sc="${sc.id}"><span class="tag">${sc.tag}</span><b>${sc.title}</b><small>${sc.id}｜時限 ${sc.timeLimit/60} 分鐘</small></button>`).join('');
-  document.querySelectorAll('.sc').forEach(b=>b.onclick=()=>{selSc=b.dataset.sc;renderScList();});
-  $('#briefTxt').textContent=SC[selSc].brief;
+  $('#sclist').innerHTML=Object.values(SC).map(sc=>`<button class="sc${sc.id===selSc?' on':''}" type="button" data-sc="${sc.id}"><img class="thumb" src="sc-${sc.id}.jpg" alt="${sc.title}現場示意圖" width="625" height="447"><span class="tag">${sc.tag}</span><b>${sc.title}</b><small>${sc.id}｜時限 ${sc.timeLimit/60} 分鐘</small><p>${sc.brief}</p></button>`).join('');
+  document.querySelectorAll('.sc').forEach(b=>b.onclick=()=>{selSc=b.dataset.sc;renderScList();showStep('set');});
+  const c=SC[selSc]; $('#selSc').innerHTML=`<span class="tag">${c.tag}</span><b>${c.title}</b><small style="color:var(--muted)">　${c.id}｜時限 ${c.timeLimit/60} 分鐘</small><p>${c.brief}</p>`;
+}
+function showStep(w){
+  $('#stepPick').style.display=w==='pick'?'':'none'; $('#stepSet').style.display=w==='set'?'':'none';
+  $('#startSheet').closest('.overlay').scrollTop=0;
+  if(w==='set'&&!$('#optName').value.trim()) try{$('#optName').focus({preventScroll:true});}catch(e){}
 }
 function startGame(scId,n,mode,extra,sizes){
   scId=scId||selSc; n=n||+$('#optCrew').value; mode=mode||$('#optMode').value; extra=extra==null?+$('#optExtra').value:extra; sizes=sizes||{A:+$('#optSzA').value,B:+$('#optSzB').value};
   const nm=$('#optName').value.trim(), un=$('#optUnit').value.trim();
-  if(GAS_URL&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
+  if(GAS_URL&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');showStep('set');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
   try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));localStorage.setItem('fgc_ver',VERSION);}catch(e){}
   try{$('#introVid').pause();}catch(e){}
   clearInterval(timer); alertQ.length=0; nextAlert(); $('#tips').innerHTML='';
@@ -1660,13 +1692,14 @@ renderEx();
 (function(){
   $('#verTxt').textContent='v'+VERSION;
   $('#verLog').innerHTML=CHANGELOG.map(c=>`<h2 style="font-size:14px;margin:10px 0 4px">${c.v}</h2><ul style="margin:0 0 6px;padding-left:20px;font-size:13.5px">${c.items.map(i=>`<li>${i}</li>`).join('')}</ul>`).join('');
-  try{ if(localStorage.getItem('fgc_ver')!==VERSION){ $('#verBox').open=true; $('#verTxt').insertAdjacentHTML('afterend',' <span style="background:#c8102e;color:#fff;border-radius:3px;padding:0 5px;font-size:11px;vertical-align:1px">新版</span>'); } }catch(e){}
+  try{ if(localStorage.getItem('fgc_ver')!==VERSION){ $('#verTxt').insertAdjacentHTML('afterend',' <span style="background:#c8102e;color:#fff;border-radius:3px;padding:0 5px;font-size:11px;vertical-align:1px">新版</span>'); } }catch(e){}
 })();
 renderScList();
 try{const t=JSON.parse(localStorage.getItem('fgc_tester')||'null');if(t){$('#optName').value=t.nm||'';$('#optUnit').value=t.un||'';}}catch(e){}
 $('#bSup').onclick=callSupport;
 $('#bIntro').onclick=()=>{const v=$('#introVid');v.style.display='block';v.play().catch(()=>{});};
 $('#bStart').onclick=()=>{beep();startGame();};
+$('#bBack').onclick=()=>showStep('pick');
 $('#bSendReport').onclick=sendReport;
 $('#bCancelReport').onclick=()=>$('#report').classList.remove('show');
 $('#bPause').onclick=()=>{if(!S||S.mode==='exam'||S.over||S.choiceOpen)return;S.paused=!S.paused;renderTop();};
