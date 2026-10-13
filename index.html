@@ -127,6 +127,11 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .task.cont .prog i{width:100%;background:repeating-linear-gradient(45deg,var(--amber) 0 6px,color-mix(in srgb,var(--amber) 50%,var(--panel)) 6px 12px)}
 .hint{font-size:13px;color:var(--muted);margin:0 0 8px}
 
+.tips{position:fixed;right:12px;top:70px;width:min(92vw,340px);display:flex;flex-direction:column;gap:6px;z-index:34;pointer-events:none}
+.tip{background:var(--panel);color:var(--ink);border:2px solid var(--line);border-left:7px solid var(--blue);border-radius:6px;padding:8px 12px;font-size:14px;line-height:1.4;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transform:translateX(24px);transition:opacity .25s,transform .25s}
+.tip.show{opacity:1;transform:none}
+.tip.good{border-left-color:var(--ok)}
+.tip small{display:block;color:var(--muted);font-size:11.5px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 16px;border-radius:4px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40;max-width:92vw}
 .toast.show{opacity:1}
 .alertpop{position:fixed;left:50%;top:calc(76px + env(safe-area-inset-top,0px));transform:translate(-50%,-24px);opacity:0;pointer-events:none;z-index:35;width:min(92vw,540px);background:var(--red);color:#fff;border-radius:6px;padding:14px 16px 12px 56px;font-weight:700;font-size:16.5px;line-height:1.45;box-shadow:0 12px 32px rgba(0,0,0,.35);transition:transform .25s ease-out,opacity .25s;cursor:pointer}
@@ -214,6 +219,8 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
   .task b{font-size:13.5px}
   .ztab{padding:7px 10px;font-size:13px}
   .alertpop{top:calc(56px + env(safe-area-inset-top,0px));font-size:15.5px}
+  .tips{left:8px;right:8px;width:auto}
+  .tip{font-size:13px;padding:7px 10px}
   .two{grid-template-columns:1fr}
   .sheet{padding:16px}
 }
@@ -343,6 +350,7 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
     <img class="imgprev" id="imgPrev" alt="事後檢討報告圖片">
   </div>
 </div>
+<div class="tips" id="tips" aria-live="polite"></div>
 <div class="flash" id="flash"></div>
 <div class="alertpop" id="alertpop" role="alert"></div>
 <div class="toast" id="toast"></div>
@@ -368,8 +376,18 @@ const vcol = h => h>60?'#23824f':h>30?'#e39b00':'#c8102e';
 
 function log(msg, type='info'){
   S.log.unshift({t:S.t, msg, type});
-  if(type==='alert') pushAlert(msg);
+  if(type==='alert'){ S.tipFlag=true; pushAlert(msg); }
+  else if((type==='good'||type==='radio')&&S.t>0&&!/^(帶隊官|初期報告|同時抵達)/.test(msg)){ S.tipFlag=true; pushTip(msg,type); }
   renderFeed();
+}
+function pushTip(msg,type){
+  if(!S||S.over) return;
+  const box=$('#tips'), h=document.querySelector('header.top');
+  box.style.top=((h?h.getBoundingClientRect().bottom:62)+8)+'px';
+  while(box.children.length>=3) box.firstChild.remove();
+  const d=document.createElement('div'); d.className='tip'+(type==='good'?' good':''); d.innerHTML=`${msg}<small>T+${fmt(S.t)}</small>`;
+  box.appendChild(d); requestAnimationFrame(()=>d.classList.add('show'));
+  setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),300);},4000);
 }
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),2400);}
 function rescue(v, how){
@@ -655,9 +673,9 @@ const S002 = {
   P:{bleed:0.1, bleedCare:0.025, pasDrain:0.008, chdDrain:0.01, crashAt:240, policeAt:420, riskGrow:0.12},
   init(){
     Object.assign(M,{outer:false,childSuspect:false,interview:false,block:false,cones:false,police:false,stable:false,innerDone:false,
-      glass:false,srs:false,tools:false,toolSets:1,battery:false,absorb:false,risk:20,carFire:false,doorOff:false,roofOff:false,dash:false,pasDoor:false,
+      glass:false,srs:false,tools:false,toolSets:1,battery:false,seat:false,ignOff:false,absorb:false,risk:20,carFire:false,doorOff:false,roofOff:false,dash:false,pasDoor:false,
       ck:{outer:null,traffic:null,stable:null,innerEntry:null,unstableEntry:false,cutEver:null,cutUnstable:false,care:null,childFound:null,
-          glassBeforeCut:null,srsBeforeRoof:null,airbag:false,spinal:[],drvOut:null,crash:null,fire:null,guard:null}});
+          glassBeforeCut:null,srsBeforeRoof:null,airbag:false,seat:null,cutOff:null,spinal:[],drvOut:null,crash:null,fire:null,guard:null}});
   },
   reinforce:{label:'救助器材車＋救護車', eta:600, deadline:240,
     why:'救助器材車帶來第二套破壞器材和第二輛救護車；夾困加上多名傷患，第一梯次一定不夠。',
@@ -708,7 +726,7 @@ const S002 = {
       log(`切割A柱時未爆側邊氣囊突然展開，${vic.name}臉部受傷退出！車頂移除中斷。`,'alert');
     }
     // 起火風險
-    if(!M.carFire) M.risk=Math.min(100,M.risk+P.riskGrow*(M.battery?0.25:1)*(M.absorb?0.5:1));
+    if(!M.carFire) M.risk=Math.min(100,M.risk+P.riskGrow*(M.battery?0.25:1)*(M.ignOff?0.7:1)*(M.absorb?0.5:1));
     if(M.risk>=70&&!S.warned.risk){S.warned.risk=1;log('引擎室白煙轉濃，汽油味加重！','alert');}
     if(M.risk>=100&&!M.carFire){
       if(has('guard')){M.risk=40;M.ck.fire=M.ck.fire||'controlled';log('引擎室竄出火苗，警戒人員立即以滅火器撲滅。','good');}
@@ -728,7 +746,7 @@ const S002 = {
   idle:()=>M.block?[150,128]:[300,240],
   pos(a){
     return ({outer:[245,140],interview:[300,118],block:[140,140],cones:[62,185],guard:[278,182],battery:[268,166],absorb:[272,202],extinguish:[278,164],
-      stable:[232,198],glass:[225,148],inner:[205,176],innerCare:[210,176],srs:[216,176],chdOut:[198,192],tools:[190,224],doorOff:[222,148],
+      stable:[232,198],glass:[225,148],inner:[205,176],innerCare:[210,176],srs:[216,176],seat:[214,176],ignOff:[218,172],chdOut:[198,192],tools:[190,224],doorOff:[222,148],
       pasDoor:[226,200],roofOff:[234,142],dash:[246,152],drvOut:[210,146],pasOut:[220,202],care:[372,254],transport:[372,254]})[a.def.id];
   },
   scene(){
@@ -775,6 +793,7 @@ const S002 = {
       ['車輛穩固後才進入或破壞', entered?!(c.unstableEntry||c.cutUnstable):null, !entered?'—':c.unstableEntry?'未穩固即進入車內':c.cutUnstable?'未穩固即破壞':'是', '車輛懸空或傾斜時，任何進入和破壞都可能讓車身位移，加重脊椎傷害。'],
       ['發現後座兒童', c.childFound!=null, c.childFound==null?'未發現':ft(c.childFound), '外圈加內圈檢查要確認所有乘員；深色隔熱紙和夜間光線都容易漏看。'],
       ['車內照護開始（5分鐘內）', c.care==null?false:c.care<=300, ft(c.care), '大量出血的駕駛撐不過漫長的破壞時間，止血和頸椎保護要先進去。'],
+      ['熄火或斷電前確認座椅可否調整', null, c.cutOff==null?'尚未熄火或斷電':c.seat!=null&&c.seat<=c.cutOff?`是（${ft(c.seat)}，熄火／斷電 ${ft(c.cutOff)}）`:c.seat!=null?`熄火／斷電後才完成（${ft(c.seat)}）`:'未確認即熄火／斷電', '電動座椅在斷電、熄火後就動不了。要擴大夾困空間，應在救護人員固定頸椎後、熄火斷電前先確認；此項為提醒，不計分。'],
       ['危害控制（斷電＋滅火警戒）', M.battery&&c.guard!=null, `${M.battery?'已斷電':'未斷電'}，${c.guard!=null?'有警戒':'無警戒'}${c.fire==='uncontrolled'?'；車輛起火':''}`, '引擎冒煙、漏油的現場，滅火器警戒和斷電是基本動作。'],
       ['破壞前完成玻璃管理', c.glassBeforeCut, c.glassBeforeCut==null?'未破壞':(c.glassBeforeCut?'是':'否'), '先覆蓋傷患、移除玻璃，避免破壞時碎片噴濺。'],
       ['移除車頂前確認氣囊', c.srsBeforeRoof, c.srsBeforeRoof==null?'未移除車頂':(c.airbag?'未確認，氣囊展開傷及隊員':c.srsBeforeRoof?'是':'否'), '未爆氣囊和氣體產生器的位置要先剝開內飾確認，切割時避開。'],
@@ -812,8 +831,8 @@ S002.tasks = [
    avail:()=>M.cones?'已完成':M.police?'已由警察管制':true, done:()=>{M.cones=true;if(M.ck.traffic==null)M.ck.traffic=S.t;log('後方警示錐設置完成，來車減速改道。');}},
   {id:'guard', zone:'外圍／交通', name:'滅火器警戒', min:1,max:1, dur:null, desc:'持續：持滅火器待命防止起火',
    avail:()=>true, start:()=>{if(M.ck.guard==null)M.ck.guard=S.t;}},
-  {id:'battery', zone:'外圍／交通', name:'斷電（拆電瓶）', min:1,max:1, dur:60, desc:'降低起火風險',
-   avail:()=>!M.outer?'需先完成外圈評估':M.battery?'已完成':true, done:()=>{M.battery=true;log('已拆除電瓶負極，車輛斷電。');}},
+  {id:'battery', zone:'外圍／交通', name:'斷電（拆電瓶）', min:1,max:1, dur:60, desc:'降低起火風險；斷電後電動座椅無法再調整',
+   avail:()=>!M.outer?'需先完成外圈評估':M.battery?'已完成':true, done:()=>{M.battery=true;if(M.ck.cutOff==null)M.ck.cutOff=S.t;log('已拆除電瓶負極，車輛斷電。');}},
   {id:'absorb', zone:'外圍／交通', name:'吸油棉處理漏油', min:1,max:1, dur:45, desc:'',
    avail:()=>!M.outer?'需先完成外圈評估':M.absorb?'已完成':true, done:()=>{M.absorb=true;log('漏油以吸油棉圍堵吸附。');}},
   {id:'extinguish', zone:'外圍／交通', name:'撲滅車輛火勢', min:1,max:2, dur:a=>a.crew.length>=2?25:40, desc:'', urgent:true,
@@ -829,6 +848,12 @@ S002.tasks = [
      childFound2('後座安全座椅上有一名約 4 歲兒童，哭泣、可活動！');}},
   {id:'innerCare', zone:'車內', name:'車內照護（止血、頸椎保護）', min:1,max:1, dur:null, desc:'持續：救護人員留在車內',
    avail:()=>!M.innerDone?'需先完成內圈評估':true, start:()=>{if(M.ck.care==null)M.ck.care=S.t;}},
+  {id:'seat', zone:'車內', name:'確認電動座椅可否後移', min:1,max:1, dur:30, desc:'需車輛尚有電力；座椅後移可擴大夾困空間，推儀表板時間縮短',
+   avail:()=>!M.innerDone?'需先完成內圈評估':M.ck.care==null?'需先由救護人員開始車內照護（頸圈固定）':M.seat?'已完成':(M.ignOff||M.battery)?'車輛已熄火或斷電，電動座椅無法調整':true,
+   done:()=>{M.seat=true;M.ck.seat=S.t;log('電動座椅已後移、椅背放平，駕駛腿部空間擴大，推移儀表板所需時間縮短。','good');}},
+  {id:'ignOff', zone:'車內', name:'熄火（關閉點火）', min:1,max:1, dur:20, desc:'需有人進入車內操作；熄火後電動座椅無法再調整',
+   avail:()=>!M.innerDone?'需先有人進入車內（完成內圈評估）':M.ignOff?'已完成':true,
+   done:()=>{M.ignOff=true;if(M.ck.cutOff==null)M.ck.cutOff=S.t;M.risk=Math.max(0,M.risk-5);log('已熄火並拔除鑰匙，引擎停止運轉。');}},
   {id:'srs', zone:'車內', name:'確認氣囊位置（剝除內飾）', min:1,max:1, dur:30, desc:'找出未爆氣囊與氣體產生器',
    avail:()=>!M.innerDone?'需先完成內圈評估':M.srs?'已完成':true, done:()=>{M.srs=true;log('已標示 A柱、B柱內未爆側邊氣囊位置。');}},
   {id:'chdOut', zone:'車內', name:'抱出後座兒童', min:1,max:1, dur:30, desc:'連同安全座椅移出',
@@ -842,7 +867,7 @@ S002.tasks = [
    avail:()=>M.pasDoor?'已完成':cutAvail2(), start:cutStart2, done:()=>{M.pasDoor=true;log('副駕駛車門已擴張開啟。');}},
   {id:'roofOff', zone:'破壞解困', name:'移除車頂', min:2,max:3, dur:a=>a.crew.length>=3?220:300, cut:true, desc:'2人300秒／3人220秒，兩側同時開放',
    avail:()=>M.roofOff?'已完成':cutAvail2(), start:()=>{cutStart2();M.ck.srsBeforeRoof=M.srs;}, done:()=>{M.roofOff=true;log('車頂已移除。');}},
-  {id:'dash', zone:'破壞解困', name:'推移儀表板（解除夾困）', min:2,max:2, dur:240, cut:true, desc:'',
+  {id:'dash', zone:'破壞解困', name:'推移儀表板（解除夾困）', min:2,max:2, dur:()=>M.seat?150:240, cut:true, desc:'已調整座椅 150 秒／未調整 240 秒',
    avail:()=>M.dash?'已完成':cutAvail2(!(M.doorOff||M.roofOff)?'需先拆門或移除車頂':true), start:cutStart2,
    done:()=>{M.dash=true;log('儀表板已推移，駕駛雙腿解除夾困。','good');}},
   {id:'drvOut', zone:'破壞解困', name:'駕駛移出（長背板）', min:2,max:3, dur:90, desc:'',
@@ -857,18 +882,18 @@ S002.tasks = [
 /* ================= 情境 S003：汽油槽車翻覆 ================= */
 const S003 = {
   id:'S003', tag:'化災', title:'台11線汽油槽車翻覆洩漏',
-  brief:'清晨 05:30，台11線海岸路段，一輛槽車翻覆於路肩，報案人表示聞到濃烈油氣味，駕駛疑似受困駕駛室。當時吹東北風（圖中由左往右吹），下風處約 150 公尺有民宅聚落，路旁排水溝通往海邊。第一梯次出動水箱車 2 輛（2號車載泡沫原液 200 公升）、救護車 1 輛。化災支援請求後約 12 分鐘到場，警察約 6 分鐘到場。',
+  brief:'清晨 05:30，台11線海岸路段，一輛槽車翻覆於路肩，報案人表示聞到濃烈油氣味，駕駛疑似受困駕駛室。當時吹東北風（圖中由左往右吹），下風處約 150 公尺有民宅聚落，路旁排水溝通往海邊。第一梯次出動水箱車 2 輛（水箱 1,500 公升＋3,000 公升；車上僅有泡沫原液 4 桶，共 80 公升）、救護車 1 輛。化災支援請求後約 12 分鐘到場，警察約 6 分鐘到場。',
   arrival:n=>`第一梯次即將到場，共 ${n} 人。前方可見翻覆槽車，路面有液體流動。`,
   hint:'俯視圖：比例約 1 格 = 1 公尺，風由左往右',
   timeLimit:1800, amb:1,
   zones:['偵檢／管制','水源／泡沫','熱區作業','救護'],
   victims:[{id:'drv', name:'槽車駕駛', room:'駕駛室（車門變形、腿部受傷）', hp:85, known:true, outDrain:0.02}],
-  P:{leak0:3, leakPlug:0.15, pool0:600, vk:2.6, houses:150, water:4000, foam:200, flow:6, conc:0.03, motoAt:200, policeAt:360, nearIgnite:90, resDelay:120},
+  P:{leak0:3, leakPlug:0.15, pool0:600, vk:2.6, houses:150, water:4500, foam:80, flow:2.02, conc:0.03, depth:0.02, appRate:4.1, appMin:15, drum:20, motoAt:200, policeAt:360, nearIgnite:90, resDelay:120},
   init(){
     const P=this.P;
     Object.assign(M,{staging:null,staging0:null,ident:false,isolate:false,evac:false,dike:false,plug:false,police:false,line:false,inductor:false,gas:false,
-      moved:false,water:P.water,foam:P.foam,cov:0,pool:P.pool0,leak:P.leak0,vapor:0,fire:false,tanker:false,distMul:1,
-      ck:{ident:null,isolate:null,evac:null,dike:null,plug:null,foamStart:null,rescue:null,ignition:null,drainSpill:null,resExposed:null,gas:null,
+      moved:false,water:P.water,foam:P.foam,cov:0,pool:P.pool0,leak:P.leak0,vapor:0,fire:false,tanker:false,distMul:1,r:0,foaming:false,
+      ck:{foamPlan:null,foamOut:null,planShort:null,ident:null,isolate:null,evac:null,dike:null,plug:null,foamStart:null,rescue:null,ignition:null,drainSpill:null,resExposed:null,gas:null,
           noIdent:false,entryNoFoam:false,badStaging:false,movedAt:null,fireOut:null}});
   },
   onStart(){
@@ -880,7 +905,7 @@ const S003 = {
   reinforce:{label:'化災支援', eta:720, deadline:180,
     why:'化災需要大量泡沫原液、水源和防護裝備，第一梯次撐不久，越早請求越好。',
     arrive(){ addCrew(['支援隊員1','支援隊員2','支援隊員3']); M.foam+=400; M.tanker=true;
-      log('化災支援到場：增援 3 人、泡沫原液 400 公升、水庫車（可用「水庫車補水」）。','good'); }},
+      log('化災支援到場：增援 3 人、泡沫原液 20 桶（400 公升）、水庫車（可用「水庫車補水」）。','good'); }},
   report:{deadline:150, fields:[
       {k:'mat',label:'洩漏物質',opts:['UN1203 汽油（ERG 128）','液化石油氣（LPG）','不明，待辨識']},
       {k:'leak',label:'洩漏狀況',opts:['持續洩漏','無洩漏']},
@@ -900,24 +925,29 @@ const S003 = {
     return [`洩漏 <b>${Math.round(M.pool)} L</b>（${M.leak.toFixed(1)} L/s）`,
       `油氣 <b>${M.fire?'燃燒中':M.gas?Math.round(M.vapor)+' m':'未偵測'}</b>`,
       `泡沫覆蓋<span class="meter blue"><i style="width:${M.cov.toFixed(0)}%"></i></span><b>${Math.round(M.cov)}%</b>`,
-      `水 <b>${Math.round(M.water)} L</b>`, `原液 <b>${Math.round(M.foam)} L</b>`];
+      `施放率 <b>${M.foaming?Math.round(M.r*100)+'%（100%＝剛好夠）':'未施放'}</b>`,
+      `水 <b>${Math.round(M.water)} L</b>`, `原液 <b>${Math.round(M.foam)} L（約 ${(M.foam/this.P.drum).toFixed(1)} 桶）</b>`];
   },
   tick(){
     const P=this.P;
     if(!M.staging) return;
     const fa=actOf('foamBlanket')[0]; let foaming=false;
+    const area=M.pool/1000/P.depth, need=area*P.appRate/60, nz=fa?fa.crew.length:0;
+    let Q=0;
     if(fa&&M.line&&M.inductor&&has('pump')&&M.water>0&&M.foam>0){
-      foaming=true; M.water=Math.max(0,M.water-P.flow); M.foam=Math.max(0,M.foam-P.flow*P.conc);
+      foaming=true; Q=Math.min(P.flow*nz, M.water, M.foam/P.conc);
+      M.water=Math.max(0,M.water-Q); M.foam=Math.max(0,M.foam-Q*P.conc);
       if(M.ck.foamStart==null) M.ck.foamStart=S.t;
-      if(M.water<=0&&!S.warned.w){S.warned.w=1;log('水箱用盡，泡沫中斷！','alert');}
-      if(M.foam<=0&&!S.warned.f){S.warned.f=1;log('泡沫原液用盡！','alert');}
+      if(M.water<=0&&!S.warned.w){S.warned.w=1;if(M.ck.foamOut==null)M.ck.foamOut='水';log('水箱用盡，泡沫中斷！','alert');}
+      if(M.foam<=0&&!S.warned.f){S.warned.f=1;if(M.ck.foamOut==null)M.ck.foamOut='原液';log('泡沫原液用盡！','alert');}
     }
+    M.foaming=foaming; M.r=need>0?Q/need:0;
     if(!M.dike&&M.pool>1500){
       if(M.ck.drainSpill==null){M.ck.drainSpill=S.t;log('油品順著路面流進排水溝，往海邊流去！','alert');}
       M.pool+=M.leak*0.5;
     } else M.pool+=M.leak;
-    const rate=(fa&&fa.crew.length>=2?1.2:0.8)*(M.fire?0.45:1)*Math.min(1,2500/M.pool);
-    M.cov = foaming ? M.cov+rate : M.cov-0.25;
+    const cap=Math.min(100,M.r*100+5), gain=1.0*Math.min(M.r,1.5)*(M.fire?0.45:1);
+    M.cov = foaming ? (M.cov<cap?Math.min(cap,M.cov+gain):M.cov-0.3) : M.cov-0.25;
     M.cov -= M.leak/M.pool*100*0.5;
     M.cov = Math.max(0,Math.min(100,M.cov));
     M.vapor = M.fire?0:(10+Math.sqrt(M.pool)*P.vk*(1-M.cov/100*0.8));
@@ -946,7 +976,7 @@ const S003 = {
   pos(a){
     const bx=this.bx();
     return ({ident:[150,128],move:[bx+10,126],gasCheck:[205,196],isolate:[175,108],evac:[365,168],rit:[150,146],pump:[bx+10,126],layLine:[170,140],
-      inductor:[bx+28,126],foamBlanket:[188,192],shuttle:[bx,126],dike:[288,196],plug:[228,150],rescueDrv:[176,140],care:[bx+30,148],transport:[bx+30,148]})[a.def.id];
+      inductor:[bx+28,126],estFoam:[bx+18,134],foamBlanket:[188,192],shuttle:[bx,126],dike:[288,196],plug:[228,150],rescueDrv:[176,140],care:[bx+30,148],transport:[bx+30,148]})[a.def.id];
   },
   scene(){
     let s=`<rect width="420" height="300" fill="var(--grass)"/><rect y="62" width="420" height="58" fill="var(--road)"/><line x1="0" y1="91" x2="420" y2="91" stroke="#e8c33a" stroke-width="2" stroke-dasharray="10 8"/>`;
@@ -988,6 +1018,8 @@ const S003 = {
       ['下風處民宅疏散', c.evac!=null&&(c.resExposed==null||c.evac<=c.resExposed+60), c.evac==null?'未疏散':ft(c.evac)+(c.resExposed!=null?`（油氣於 ${ft(c.resExposed)} 到達）`:''), 'ERG 128 指出大量洩漏應考慮下風處至少 300 公尺的初期疏散，150 公尺的民宅在範圍內。'],
       ['進入熱區前完成辨識', hot?!c.noIdent:null, c.noIdent?'未辨識即進入':'是', '不知道是什麼物質，就不知道要穿什麼、站多遠。'],
       ['泡沫覆蓋後才進入救人', c.rescue==null&&!c.entryNoFoam?null:!c.entryNoFoam, c.entryNoFoam?'覆蓋不足即進入':c.rescue!=null?'是':'—', '先壓制油氣再進去救人，避免救援人員變成第二批受困者。'],
+      ['估算泡沫需求量（5分鐘內）', c.foamPlan==null?false:c.foamPlan<=300, c.foamPlan==null?'未估算':ft(c.foamPlan)+(c.planShort?'；估算後發現備量不足':''), '面積×4.1 L/分/㎡×15 分鐘×3%，才知道要幾桶原液、幾噸水、幾支瞄子；不足就要提早請求化災支援和水庫車。'],
+      ['泡沫施放未因缺水或缺原液中斷', c.foamStart==null?null:c.foamOut==null, c.foamStart==null?'未施放':c.foamOut==null?'未中斷':`${c.foamOut}用盡`, '車上通常只有約 4 桶原液；渦輪瞄子加延伸泡沫管約 5 分 30 秒用完一桶，單支只能顧約 30 平方公尺，原液、水量和瞄子數都要邊用邊算。'],
       ['防止油品流入排水溝', c.drainSpill==null, c.drainSpill==null?'未流入':`${ft(c.drainSpill)} 流入排水溝`, '築堤和封堵水溝要趁油池還小時做，流進海裡就是另一場災難。'],
       ['關閉緊急停止開關', c.plug!=null, ft(c.plug), '關閉後槽車不再出油，油池不再擴大，泡沫覆蓋才守得住。'],
       ['未發生起火', c.ignition==null, c.ignition?`T+${fmt(c.ignition.t)} ${c.ignition.src}`:'未起火', '控制火源（車輛、人車、民宅）和泡沫覆蓋是防止起火的兩道防線。'],
@@ -1019,12 +1051,20 @@ S003.tasks = [
   {id:'evac', zone:'偵檢／管制', name:'下風處民宅疏散', min:1,max:2, dur:a=>a.crew.length>=2?150:240, desc:'1人240秒／2人150秒',
    avail:()=>M.evac?'已完成':true, done:()=>{M.evac=true;M.ck.evac=S.t;log('下風處民宅住戶已疏散至上風處。','good');}},
   makeRit('偵檢／管制'),
+  {id:'estFoam', zone:'水源／泡沫', name:'估算油池面積與泡沫需求量', min:1,max:1, dur:30, desc:'目測油池、以碳氫類 4.1 L/分/㎡ 估算原液、水量與瞄子數',
+   avail:()=>M.ck.foamPlan!=null?'已完成':true,
+   done:()=>{
+     const P=S003.P, est=Math.max(5,Math.round(M.pool/1000/P.depth*1.15/5)*5);     // 目測偏大約 15%，取 5 的倍數
+     const flowL=est*P.appRate, sol=flowL*P.appMin, conc=sol*P.conc, drums=Math.ceil(conc/P.drum-1e-9), waterT=(sol-conc)/1000;
+     const nozzles=Math.ceil(flowL/60/P.flow-1e-9);
+     M.ck.foamPlan=S.t; M.ck.planShort=(M.foam<conc&&!M.tanker)||(M.water<sol-conc&&!M.tanker);
+     log(`泡沫估算：油池約 ${est} ㎡（目測，有誤差）；施放率需 ${Math.round(flowL)} L/分（約 ${Math.round(flowL/3.785)} gpm，${nozzles} 支瞄子，單支約 ${Math.round(P.flow*60/3.785)} gpm）；灑佈 ${P.appMin} 分鐘需原液約 ${Math.round(conc)} L（${drums} 桶）、水約 ${waterT.toFixed(1)} 噸。現有原液 ${Math.round(M.foam)} L、水 ${Math.round(M.water)} L。${M.leak>1?'洩漏尚未停止，油池還會擴大，備量要抓多。':''}`,'radio');}},
   {id:'pump', zone:'水源／泡沫', name:'操作泵浦', min:1,max:1, dur:null, desc:'持續：泡沫要出來必須有人', avail:()=>true},
   {id:'layLine', zone:'水源／泡沫', name:'佈設泡沫水線', min:1,max:2, dur:a=>Math.round((a.crew.length>=2?60:90)*M.distMul), desc:'',
    avail:()=>M.line?'已完成':true, done:()=>{M.line=true;log('泡沫水線佈設完成。');}},
-  {id:'inductor', zone:'水源／泡沫', name:'架設泡沫比例混合器', min:1,max:1, dur:40, desc:'3% 混合比例',
+  {id:'inductor', zone:'水源／泡沫', name:'架設泡沫比例混合器', min:1,max:1, dur:40, desc:'3% 混合比例（泡沫桶身標示 3%）',
    avail:()=>M.inductor?'已完成':true, done:()=>{M.inductor=true;log('泡沫比例混合器架設完成（3%）。');}},
-  {id:'foamBlanket', zone:'水源／泡沫', name:'泡沫覆蓋油池', min:1,max:2, dur:null, idlh:true, desc:'持續：覆蓋率停止施放後會流失',
+  {id:'foamBlanket', zone:'水源／泡沫', name:'泡沫覆蓋油池', min:1,max:2, dur:null, idlh:true, desc:'持續：1 人＝1 支（渦輪瞄子＋延伸泡沫管＋比例混合器，10kg、射程約 10m、一桶 20L 約 5 分 30 秒用完）、2 人＝2 支，流量與消耗加倍；施放率不足時覆蓋率上不去',
    avail:()=>!M.line?'水線未佈設':!M.inductor?'未架設混合器':!has('pump')?'無人操作泵浦':M.water<=0?'無水':M.foam<=0?'無泡沫原液':true},
   {id:'shuttle', zone:'水源／泡沫', name:'水庫車補水', min:1,max:1, dur:60, desc:'補水 8,000 公升',
    hidden:()=>!M.tanker, avail:()=>true, done:()=>{M.water+=8000;M.tanker=false;log('水庫車補水 8,000 公升。');}},
@@ -1154,7 +1194,7 @@ function tick(){
   if(!S||S.over||S.paused||S.choiceOpen) return;
   S.t++;
   for(const a of [...S.active]){
-    if(a.total!=null){a.left--; if(a.left<=0){removeActive(a); if(a.def.done) a.def.done(a); if(S.over) return;}}
+    if(a.total!=null){a.left--; if(a.left<=0){removeActive(a); S.tipFlag=false; if(a.def.done) a.def.done(a); if(S.over) return; if(!S.tipFlag) pushTip(`✓ 完成：${names(a.crew)}：${a.def.name}`,'good');}}
   }
   S.sc.tick(); if(S.over) return;
   for(const v of S.victims){
@@ -1393,6 +1433,7 @@ function showAAR(){
     <table class="vt">${vrows}</table>
     <h2>檢核點</h2>
     ${items.map(i=>`<div class="ck">${icon(i[1])}<div><b>${i[0]}</b>：${i[2]}</div><small>${i[3]}</small></div>`).join('')}
+    ${S.sc.id==='S003'?`<h2>延伸閱讀</h2><p>想確認自己的估算對不對？請查閱：<a href="https://sites.google.com/view/ttfd003003/%E6%90%B6%E6%95%91/%E5%8C%96%E5%AD%B8%E7%81%BD%E5%AE%B3/%E6%A7%BD%E8%BB%8A%E5%9C%96%E5%8D%A1%E8%88%87%E6%B3%A1%E6%B2%AB%E8%A8%88%E7%AE%97" target="_blank" rel="noopener">槽車圖卡與泡沫計算</a>（槽車辨識、緊急遮斷閥位置、泡沫原液與水量計算）。</p>`:''}
     <h2>時間軸</h2>
     <div class="tl">${[...S.log].reverse().map(l=>`<div><time>T+${fmt(l.t)}</time>${l.msg}</div>`).join('')}</div>
     <div class="row"><button class="btn go" id="bAgain" type="button">再演練一次</button><button class="btn" id="bSetup" type="button">換情境</button><button class="btn" id="bClose" type="button">回到現場畫面</button><button class="btn" id="bImg" type="button">儲存報告圖片</button><button class="btn" id="bResend" type="button">重新上傳</button><button class="btn" id="bFbAar" type="button">意見回饋</button></div>`;
@@ -1582,7 +1623,7 @@ function startGame(scId,n,mode,extra,sizes){
   if(GAS_URL&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
   try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));}catch(e){}
   try{$('#introVid').pause();}catch(e){}
-  clearInterval(timer); alertQ.length=0; nextAlert();
+  clearInterval(timer); alertQ.length=0; nextAlert(); $('#tips').innerHTML='';
   newState(scId,n,mode,extra,sizes); selected.clear(); curUnit='own'; curZone=S.sc.zones[0];
   S.tester={name:nm||'未填',unit:un};
   $('#crew').dataset.n=''; buildTasks(); buildReportForm();
