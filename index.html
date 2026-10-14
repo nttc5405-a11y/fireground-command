@@ -162,6 +162,14 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .sc small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
 .sc .tag{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:var(--ink);padding:1px 7px;border-radius:3px;margin-bottom:5px}
 .sheet.wide{max-width:900px}
+.req{color:var(--red);font-size:12px;font-weight:700}
+input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
+.marq{max-width:900px;margin:0 auto 8px;overflow:hidden;white-space:nowrap;background:#1f2a33;color:#fff;border-radius:4px;padding:7px 0;font-size:15px;font-weight:700;border-left:6px solid var(--red)}
+.marq[hidden]{display:none}
+.marqin{display:inline-block;padding-left:100%;will-change:transform;animation:marq linear infinite}
+.marq:hover .marqin,.marq:active .marqin{animation-play-state:paused}
+@keyframes marq{to{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){.marq{white-space:normal}.marqin{animation:none;padding:0 12px;display:block}}
 .sclist.big{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .sclist.big .sc{padding:14px}
 .sclist.big .sc b{font-size:17px}
@@ -280,6 +288,7 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 </main>
 
 <div class="overlay show" id="start">
+  <div class="marq" id="marq" hidden role="note" aria-label="公告"><div class="marqin" id="marqIn"></div></div>
   <div class="sheet wide" id="startSheet">
     <h1>消防指揮情境訓練</h1>
     <p>你是第一梯次帶隊官。到場後時間就開始流動，狀況會自己惡化，所有決定都會被記錄，結束後產生事後檢討（AAR）。</p>
@@ -292,8 +301,8 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
     <div class="selsc" id="selSc"></div>
     <h2>第二步：填寫資料與出勤設定</h2>
     <div class="two">
-      <div><label for="optName">姓名</label><input id="optName" autocomplete="name" placeholder="例：王小明"></div>
-      <div><label for="optUnit">單位</label><input id="optUnit" placeholder="例：成功分隊"></div>
+      <div><label for="optName">姓名 <span class="req">＊必填</span></label><input id="optName" autocomplete="name" placeholder="例：王小明" required></div>
+      <div><label for="optUnit">單位 <span class="req">＊必填</span></label><input id="optUnit" placeholder="例：成功分隊" required></div>
       <div><label for="optCrew">本隊出勤人數（含帶隊官）</label><select id="optCrew"><option value="3">3 人</option><option value="4" selected>4 人</option><option value="5">5 人</option><option value="6">6 人</option></select></div>
       <div><label>同時抵達的支援單位（最多 2 個）</label><div class="row" style="margin:0;align-items:center"><button class="btn" id="bExM" type="button" aria-label="減少支援單位">－</button><b id="exTxt" style="min-width:150px;text-align:center"></b><button class="btn" id="bExP" type="button" aria-label="增加支援單位">＋</button></div><input type="hidden" id="optExtra" value="0">
         <div id="exSizes" style="display:none;gap:8px;margin-top:6px"><div style="flex:1"><label for="optSzA">A 隊人數（含隊長）</label><select id="optSzA"><option>3</option><option>4</option><option>5</option><option>6</option></select></div><div style="flex:1" id="szBwrap"><label for="optSzB">B 隊人數（含隊長）</label><select id="optSzB"><option>3</option><option>4</option><option>5</option><option>6</option></select></div></div></div>
@@ -378,8 +387,12 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 /* ================= 共用設定 ================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec';   // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
 const AIR = 900, AIR_WARN = 300;
-const VERSION = '2026.10.13d';
+const VERSION = '2026.10.14';
 const CHANGELOG = [
+  {v:'2026.10.14', items:[
+    '開始畫面新增跑馬燈公告，內容與速度由管理者在試算表維護；開始演練後不顯示。',
+    '姓名與單位改為必填。',
+  ]},
   {v:'2026.10.13d', items:[
     '任務被撤回後重新派人時，已完成的進度會保留（例如做了 60 秒才改派，不會從頭計時），剩餘時間依新的人力換算。',
   ]},
@@ -1962,7 +1975,13 @@ function showStep(w){
 function startGame(scId,n,mode,extra,sizes){
   scId=scId||selSc; n=n||+$('#optCrew').value; mode=mode||$('#optMode').value; extra=extra==null?+$('#optExtra').value:extra; sizes=sizes||{A:+$('#optSzA').value,B:+$('#optSzB').value};
   const nm=$('#optName').value.trim(), un=$('#optUnit').value.trim();
-  if(GAS_URL&&!nm){$('#aar').classList.remove('show');$('#start').classList.add('show');showStep('set');toast('請先填寫姓名，結果才能對應到人');$('#optName').focus();return;}
+  ['#optName','#optUnit'].forEach(i=>$(i).classList.remove('bad'));
+  if(!nm||!un){
+    $('#aar').classList.remove('show');$('#start').classList.add('show');showStep('set');
+    if(!nm)$('#optName').classList.add('bad'); if(!un)$('#optUnit').classList.add('bad');
+    toast(!nm&&!un?'姓名與單位為必填':!nm?'請填寫姓名（必填）':'請填寫單位（必填）');
+    $(!nm?'#optName':'#optUnit').focus();return;
+  }
   try{localStorage.setItem('fgc_tester',JSON.stringify({nm,un}));localStorage.setItem('fgc_ver',VERSION);}catch(e){}
   try{$('#introVid').pause();}catch(e){}
   clearInterval(timer); alertQ.length=0; nextAlert(); $('#tips').innerHTML='';
@@ -1987,6 +2006,28 @@ renderEx();
   $('#verLog').innerHTML=CHANGELOG.map(c=>`<h2 style="font-size:14px;margin:10px 0 4px">${c.v}</h2><ul style="margin:0 0 6px;padding-left:20px;font-size:13.5px">${c.items.map(i=>`<li>${i}</li>`).join('')}</ul>`).join('');
   try{ if(localStorage.getItem('fgc_ver')!==VERSION){ $('#verTxt').insertAdjacentHTML('afterend',' <span style="background:#c8102e;color:#fff;border-radius:3px;padding:0 5px;font-size:11px;vertical-align:1px">新版</span>'); } }catch(e){}
 })();
+/* 跑馬燈：內容與速度由試算表「跑馬燈」分頁維護；只在開始畫面顯示，開始演練後整個開始畫面關閉，跑馬燈也跟著消失 */
+function renderMarquee(c){
+  const box=$('#marq'), inn=$('#marqIn');
+  if(!c||!c.on||!c.items||!c.items.length){box.hidden=true;return;}
+  inn.textContent=c.items.join('　　★　　');
+  box.hidden=false;
+  const pps=Math.min(10,Math.max(1,+c.speed||4))*20;   // 速度 1～10 → 每秒 20～200 像素
+  inn.style.animationDuration=Math.max(8,inn.offsetWidth/pps)+'s';
+}
+let marqCfg=null;
+async function loadMarquee(){
+  if(!GAS_URL) return;
+  try{ const c=JSON.parse(localStorage.getItem('fgc_marq')||'null'); if(c){marqCfg=c;renderMarquee(c);} }catch(e){}
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),8000);
+    const r=await fetch(GAS_URL+'?action=marquee',{signal:ctl.signal}); clearTimeout(to);
+    const j=await r.json();
+    if(j&&j.ok&&j.marquee){ marqCfg=j.marquee; renderMarquee(j.marquee); try{localStorage.setItem('fgc_marq',JSON.stringify(j.marquee));}catch(e){} }
+  }catch(e){}
+}
+window.addEventListener('resize',()=>{ if(marqCfg) renderMarquee(marqCfg); });
+loadMarquee();
 renderScList();
 try{const t=JSON.parse(localStorage.getItem('fgc_tester')||'null');if(t){$('#optName').value=t.nm||'';$('#optUnit').value=t.un||'';}}catch(e){}
 $('#bSup').onclick=callSupport;
