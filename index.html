@@ -162,6 +162,13 @@ svg.scene{width:100%;height:auto;display:block;border:1px solid var(--line)}
 .sc small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
 .sc .tag{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:var(--ink);padding:1px 7px;border-radius:3px;margin-bottom:5px}
 .sheet.wide{max-width:900px}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.mode{text-align:left;border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:4px;padding:10px;cursor:pointer;font:inherit}
+.mode b{display:block;font-size:15px}
+.mode small{display:block;color:var(--muted);font-size:12px;margin-top:3px;line-height:1.4}
+.mode:hover{border-color:var(--red)}
+.mode.on{border-color:var(--red);background:color-mix(in srgb,var(--red) 7%,var(--panel))}
+#bResend[hidden]{display:none}
 .req{color:var(--red);font-size:12px;font-weight:700}
 input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
 .marq{max-width:900px;margin:0 auto 8px;overflow:hidden;white-space:nowrap;background:#1f2a33;color:#fff;border-radius:4px;padding:7px 0;font-size:15px;font-weight:700;border-left:6px solid var(--red)}
@@ -193,6 +200,28 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
 .tl div{padding:3px 0}
 .tl time{color:var(--muted);margin-right:8px;font-variant-numeric:tabular-nums}
 .imgprev{display:block;width:100%;height:auto;border:1px solid var(--line);margin-top:12px}
+
+/* 挑戰模式：擬定處置計畫 */
+#plan .sheet{max-width:900px}
+.planimg{display:block;width:100%;max-width:420px;height:auto;border-radius:3px;border:1px solid var(--line);margin:8px 0;background:var(--chip)}
+.pcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.pcard{position:relative;text-align:left;border:2px solid var(--line);background:var(--panel);border-radius:6px;padding:10px 12px;min-height:48px;font-size:14.5px;line-height:1.45;cursor:pointer}
+.pcard:hover{border-color:var(--ink)}
+.pcard.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,var(--panel));padding-left:40px}
+.pcard i{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-style:normal;font-weight:800;font-size:13px;display:grid;place-items:center}
+.pmine{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pitem{display:grid;grid-template-columns:30px minmax(0,1fr);gap:4px 8px;border:2px solid var(--blue);background:color-mix(in srgb,var(--blue) 6%,var(--panel));border-radius:6px;padding:8px 10px}
+.pno{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;display:grid;place-items:center;font-size:14px}
+.ptx{font-size:14.5px;line-height:1.45;min-width:0}
+.pbtns{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
+.pb{min-height:44px;min-width:76px;padding:6px 10px;border:1px solid var(--line);background:var(--chip);border-radius:6px;font-size:14px;cursor:pointer}
+.pb:disabled{opacity:.4;cursor:default}
+.pempty{color:var(--muted);font-size:13.5px;padding:8px 2px}
+.plbar{position:sticky;bottom:calc(-1 * env(safe-area-inset-bottom,0px));background:var(--panel);border-top:2px solid var(--line);margin:14px -20px -20px;padding:10px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.plbar .btn{min-height:44px;font-size:15px;padding:8px 14px}
+.plbar .btn:disabled{opacity:.45;cursor:not-allowed}
+.plbar b{font-size:13.5px}
+.plh{font-size:14.5px;margin:12px 0 2px}
 
 @media (max-width:880px){main{grid-template-columns:1fr}}
 @media (max-width:720px){
@@ -241,6 +270,7 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
   .tip{font-size:13px;padding:7px 10px}
   .two{grid-template-columns:1fr}
   .sheet{padding:16px}
+  .plbar{margin:14px -16px -16px;padding:10px 16px}
 }
 </style>
 </head>
@@ -306,7 +336,12 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
       <div><label for="optCrew">本隊出勤人數（含帶隊官）</label><select id="optCrew"><option value="3">3 人</option><option value="4" selected>4 人</option><option value="5">5 人</option><option value="6">6 人</option></select></div>
       <div><label>同時抵達的支援單位（最多 2 個）</label><div class="row" style="margin:0;align-items:center"><button class="btn" id="bExM" type="button" aria-label="減少支援單位">－</button><b id="exTxt" style="min-width:150px;text-align:center"></b><button class="btn" id="bExP" type="button" aria-label="增加支援單位">＋</button></div><input type="hidden" id="optExtra" value="0">
         <div id="exSizes" style="display:none;gap:8px;margin-top:6px"><div style="flex:1"><label for="optSzA">A 隊人數（含隊長）</label><select id="optSzA"><option>3</option><option>4</option><option>5</option><option>6</option></select></div><div style="flex:1" id="szBwrap"><label for="optSzB">B 隊人數（含隊長）</label><select id="optSzB"><option>3</option><option>4</option><option>5</option><option>6</option></select></div></div></div>
-      <div><label for="optMode">模式</label><select id="optMode"><option value="practice">練習：可暫停、可加速</option><option value="exam">考核：不可暫停</option></select></div>
+      <div style="grid-column:1/-1"><label id="modeLbl">模式</label><input type="hidden" id="optMode" value="challenge">
+        <div class="modes" id="modeSel" role="radiogroup" aria-labelledby="modeLbl">
+          <button type="button" class="mode" role="radio" aria-checked="false" data-mode="practice"><b>練習</b><small>可暫停、可加速，適合第一次玩</small></button>
+          <button type="button" class="mode" role="radio" aria-checked="false" data-mode="exam"><b>考核</b><small>不可暫停</small></button>
+          <button type="button" class="mode on" role="radio" aria-checked="true" data-mode="challenge"><b>挑戰</b><small>先擬定處置計畫；任務清單混有不適當的處置；不可暫停</small></button>
+        </div></div>
     </div>
     <div class="row"><button class="btn go" id="bStart" type="button">到場，開始演練</button></div>
     <p class="hint" style="margin-top:12px">操作：先點選待命人員，再點任務。灰色任務點下去會說明現在為什麼不能做。指揮類動作不需要選人。</p>
@@ -315,6 +350,20 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
     <div class="row"><button class="btn" id="bIntro" type="button">▶ 觀看開場影片（約 55 秒）</button></div>
     <video id="introVid" controls playsinline preload="none" poster="intro-poster.png" src="intro.mp4" style="display:none;width:100%;margin-top:10px;border-radius:4px;background:#000"></video>
     <div class="row"><button class="btn" id="bFbStart" type="button">意見回饋</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="plan">
+  <div class="sheet">
+    <h1>擬定處置計畫</h1>
+    <p id="planBrief"></p>
+    <img class="planimg" id="planImg" alt="" onerror="this.style.display='none'">
+    <p class="hint">請依你的判斷，從下列處置中選出最優先的 3～5 項並依順序排列；選項包含不該做的處置。確認計畫後，時間才會開始流動。</p>
+    <h2>可選的處置（點一下加入計畫，再點一下取消）</h2>
+    <div class="pcards" id="planPool"></div>
+    <h2>我的計畫（由上到下就是優先順序）</h2>
+    <ol class="pmine" id="planMine"></ol>
+    <div class="plbar"><button class="btn go" id="bPlanGo" type="button" disabled>確認計畫，開始演練</button><b id="planCnt"></b></div>
   </div>
 </div>
 
@@ -387,8 +436,12 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
 /* ================= 共用設定 ================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec';   // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
 const AIR = 900, AIR_WARN = 300;
-const VERSION = '2026.10.14';
+const VERSION = '2026.10.15';
 const CHANGELOG = [
+  {v:'2026.10.15', items:['開始畫面的模式改為點選方塊（練習／考核／挑戰）。',
+    '結算畫面的「重新上傳」按鈕改為只在上傳失敗時才顯示。',
+    '開始畫面的模式預設為「挑戰」（仍可改選練習或考核）。',
+    '新增「挑戰模式」：開局先擬定處置計畫，任務清單混入不適當的處置，結算對照計畫、實際與標準。']},
   {v:'2026.10.14', items:[
     '開始畫面新增跑馬燈公告，內容與速度由管理者在試算表維護；開始演練後不顯示。',
     '姓名與單位改為必填。',
@@ -445,7 +498,7 @@ function pushTip(msg,type){
   box.appendChild(d); requestAnimationFrame(()=>d.classList.add('show'));
   setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),300);},4000);
 }
-function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),2400);}
+function toast(m,ms){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),ms||2400);}
 function rescue(v, how){
   v.known=true; v.status='out'; v.outAt=S.t;
   log(`${how}救出${v.name}，移至救護區（生命徵象：${hpTxt(v.hp)}）`,'good');
@@ -1422,6 +1475,341 @@ S004.tasks = [
 
 const SC = {S001, S002, S003, S004};
 
+/* ================= 挑戰模式（先想後選＋誘餌處置） =================
+   只有開始畫面選「挑戰」時才啟用（S.chal 不為 null）；練習／考核完全不碰這一段。
+   內容集中在兩個常數，方便審閱修改（完整清單見「挑戰模式內容清單.md」）：
+   ・PLANS[情境]：pool＝開局可選的處置卡片，key＝標準優先順序（卡片 id，有序）
+       卡片：id、s（短名，寫進檢核表）、text（給玩家看的口語，不照抄任務按鈕）、right（對／錯）、
+             task（對應任務 id；report＝初期報告、reinf＝請求增援；錯誤卡對應誘餌 id）、why（結算時顯示的理由）
+   ・DECOYS[情境]：誘餌任務。混進任務清單，外觀與真任務完全相同（沒有標記）
+       id、name、desc、zone、min/max/dur（同一般任務）、gate（何時可點，回傳 true 或灰色原因）、
+       why（為什麼錯）、eff（後果說明，給 AAR 與內容清單）、run（被點下去、選好人那一刻的後果）、
+       fin（做完時的後果）；idlh/hot/start 同一般任務；
+       ref:true＝沿用情境原本就有的陷阱任務（S004 風扇／手機／室內開關），只計入誘餌名單；
+       own:true＝任務自帶後果與提示（trap4），引擎不再重複提示。 */
+const PLANS = {
+  S001:{
+    pool:[
+      {id:'size',   s:'環場評估',   text:'先繞到正面看一圈，看清楚建物、火煙和進入點，再決定怎麼打', right:true, task:'sizeA',
+       why:'到場先看全貌再決定戰術；評估前就動手，容易選錯進入點。'},
+      {id:'ask',    s:'問關係人',   text:'找屋主家屬問清楚屋裡有誰、各睡在哪裡', right:true, task:'interview',
+       why:'關係人是最快的情報來源，也能穩住想衝進去的家屬。'},
+      {id:'report', s:'初期報告',   text:'向指揮中心說明現場狀況，讓後面的單位有底', right:true, task:'report',
+       why:'初報讓指揮中心掌握狀況，也逼自己整理判斷。'},
+      {id:'reinf',  s:'請求增援',   text:'跟指揮中心要人要車，這裡的支援來得很慢', right:true, task:'reinf',
+       why:'偏遠地區增援要 8 分鐘以上，3–4 人無法同時救人、攻擊、成立 RIT，越早請求越好。'},
+      {id:'line',   s:'水線就緒',   text:'先把水線拉好、泵浦有人顧，水準備好再說', right:true, task:'layLine',
+       why:'開門就是給火氧氣，水線充水、泵浦有人操作之後再動門。'},
+      {id:'door',   s:'破門進攻',   text:'水線準備好之後，才去打開一樓的鐵捲門', right:true, task:'forceShutter',
+       why:'破門前水線已就緒，才不會門一開火勢暴衝卻沒水可用。'},
+      {id:'water',  s:'接水源',     text:'想辦法接外面的水源，車上的水撐不了多久', right:true, task:'hydrant',
+       why:'2,000 公升約 5 分半就用完，接栓或補水要在攻擊開始時就安排。'},
+      {id:'rit',    s:'成立 RIT',   text:'留兩個人專門待命，萬一自己人出事能馬上進去救', right:true, task:'rit',
+       why:'人員入室就要有 RIT；第一梯次通常做不到，增援到場要優先成立。'},
+      {id:'ladder', s:'架梯救孩子', text:'從外面架梯到三樓前窗，準備救樓上的孩子', right:true, task:'ladder',
+       why:'三樓前窗是孩童房間，架梯、破窗（配合射水）、救出，是另一條救援路線。'},
+      {id:'xsolo',  s:'一人先入室', text:'人手不夠，先派一個人衝進去快速看一圈', right:false, task:'solo',
+       why:'入室至少 2 人一組、場外另有人待命（2 進 2 出）；單人入室迷路或遇險時沒有人能救。'},
+      {id:'xppv',   s:'風扇排煙',   text:'拿大風扇往門裡吹，先把煙趕出來再說', right:false, task:'ppv',
+       why:'火點還沒壓制、也沒規劃出風口，灌風等於助燃，還會把煙火推向樓上孩子的房間。'},
+      {id:'xexpo',  s:'淋濕鄰房',   text:'先把隔壁房子淋濕，免得火燒過去', right:false, task:'expo',
+       why:'第一梯次水量只有 2,000 公升，要先用在起火處；火壓下來，延燒的問題自然解決。'},
+      {id:'xext',   s:'滅火器噴門縫', text:'拿滅火器衝到門口對著門縫噴', right:false, task:'extg',
+       why:'火已在室內發展，手提滅火器容量太小壓不住，還讓人暴露在門口的濃煙與熱氣中。'},
+    ],
+    key:['size','ask','report','line','door','rit']},
+  S002:{
+    pool:[
+      {id:'outer',  s:'外圈評估',   text:'先繞車一圈，看清楚車況、危害和傷患數', right:true, task:'outer',
+       why:'先繞一圈確認車輛狀態、危害、傷患人數，再進入內圈（目標 60 秒內）。'},
+      {id:'traffic',s:'交通管制',   text:'先把後方來車擋住，保護作業的人', right:true, task:'block',
+       why:'夜間彎道最危險的是後方來車；水箱車斜停阻擋是隊員的保命牆（目標 4 分鐘內）。'},
+      {id:'guard',  s:'滅火器警戒', text:'派人拿滅火器守在引擎室旁邊', right:true, task:'guard',
+       why:'引擎冒煙、漏油的現場，滅火器警戒和斷電是基本動作。'},
+      {id:'stable', s:'車輛穩固',   text:'先把車子墊好、頂穩，不讓它晃動', right:true, task:'stable',
+       why:'車輛懸空或傾斜時，任何進入和破壞都可能讓車身位移，加重脊椎傷害。'},
+      {id:'ask',    s:'問司機',     text:'問問砂石車司機，對面車上到底有幾個人', right:true, task:'interview',
+       why:'深色隔熱紙和夜間光線都容易漏看乘員，後座兒童常是這樣被問出來的。'},
+      {id:'inner',  s:'內圈評估',   text:'請救護人員從後座爬進去，看每個人的傷勢', right:true, task:'inner',
+       why:'確認所有乘員與傷勢；車輛要先穩固才能進入車內。'},
+      {id:'care',   s:'車內照護',   text:'有人留在車內顧著駕駛，幫他止血、固定頸部', right:true, task:'innerCare',
+       why:'大量出血的駕駛撐不過漫長的破壞時間，止血和頸椎保護要先進去（目標 5 分鐘內）。'},
+      {id:'glass',  s:'玻璃管理',   text:'動手拆車之前，先把傷患蓋好、處理碎玻璃', right:true, task:'glass',
+       why:'破壞前先覆蓋傷患、移除玻璃，避免破壞時碎片噴濺。'},
+      {id:'tools',  s:'架油壓器材', text:'把油壓破壞器材先架設好待用', right:true, task:'tools',
+       why:'提早把動力機、剪斷器、擴張器就位，解困才不會等器材。'},
+      {id:'xwash',  s:'水柱降溫',   text:'引擎室冒白煙，先拉水線對著引擎降溫', right:false, task:'wash',
+       why:'汽油遇水會漂浮擴散，水還會把油帶進邊溝；正確做法是滅火器警戒、斷電、吸油棉。'},
+      {id:'xdrag',  s:'硬拉駕駛',   text:'駕駛一直在流血，直接把他從座位上拉出來', right:false, task:'drag',
+       why:'雙腿被儀表板夾住，硬拉只會加重腿傷和脊椎傷害；要先解除夾困，並有人在車內固定頸椎。'},
+      {id:'xtruck', s:'移開砂石車', text:'請砂石車司機先把車倒開，淨空車道', right:false, task:'truck',
+       why:'兩車卡在一起，擅自移動會牽動小客車位移、破壞已做好的穩固，也毀損現場跡證。'},
+      {id:'xgrind', s:'砂輪機切 A 柱', text:'拿砂輪機直接把 A 柱切開，比較快', right:false, task:'grind',
+       why:'切割火花落在漏油和汽油蒸氣旁，起火風險大增；應使用油壓破壞器材，並先斷電、警戒。'},
+    ],
+    key:['outer','traffic','stable','inner','care','guard']},
+  S003:{
+    pool:[
+      {id:'ident',  s:'辨識物質',   text:'站遠一點用望遠鏡看槽車上的標示，先搞清楚是什麼油', right:true, task:'ident',
+       why:'先在安全距離辨識 UN 碼，再查 ERG 決定防護與距離（目標 90 秒內）。'},
+      {id:'isolate',s:'隔離管制',   text:'拉警戒線，不准人車靠近洩漏區', right:true, task:'isolate',
+       why:'ERG 128 建議洩漏區四周至少隔離 50 公尺並阻絕火源，要在機車闖入前完成。'},
+      {id:'gas',    s:'偵測油氣',   text:'用偵測器量一量，油氣到底飄到哪裡', right:true, task:'gasCheck',
+       why:'油氣看不見，要用偵測器劃出實際的危險範圍。'},
+      {id:'evac',   s:'疏散下風',   text:'通知下風處的住戶先離開', right:true, task:'evac',
+       why:'油氣比空氣重，沿地面往下風擴散；150 公尺外的民宅在 ERG 建議的下風疏散範圍內。'},
+      {id:'est',    s:'估泡沫量',   text:'先算一算要多少泡沫原液和水才夠', right:true, task:'estFoam',
+       why:'面積×4.1 L/分/㎡×15 分鐘×3%，才知道要幾桶原液、幾噸水；不足就要提早請求支援。'},
+      {id:'foam',   s:'泡沫覆蓋',   text:'架好設備，用泡沫把整個油池蓋起來', right:true, task:'foamBlanket',
+       why:'泡沫覆蓋壓制油氣，是防止起火、也是進去救人的前提。'},
+      {id:'dike',   s:'築堤封溝',   text:'趁油池還小，把排水溝口堵住、築堤擋住油', right:true, task:'dike',
+       why:'流進海裡就是另一場災難，築堤和封堵水溝要趁油池還小時做。'},
+      {id:'plug',   s:'關緊急停止開關', text:'找到槽車的緊急停止開關把它關掉，讓油不要再流', right:true, task:'plug',
+       why:'關閉後槽車不再出油，油池不再擴大，泡沫覆蓋才守得住。'},
+      {id:'rescue', s:'救駕駛',     text:'泡沫蓋好之後，再進去把卡在駕駛室的人救出來', right:true, task:'rescueDrv',
+       why:'先壓制油氣再進去救人，避免救援人員變成第二批受困者。'},
+      {id:'xwash',  s:'水沖油污',   text:'路面都是油，拉水線把它沖進水溝比較乾淨', right:false, task:'hose',
+       why:'汽油比水輕又不溶於水，水柱只會把油沖散、帶進排水溝流向大海，還會沖掉泡沫覆蓋。'},
+      {id:'xphoto', s:'近拍取樣',   text:'靠近槽車拍照、採油樣，回報起來比較清楚', right:false, task:'photo',
+       why:'未辨識、未偵測就進熱區近距離停留，一般手機相機與取樣動作有靜電與火花風險，人員也直接暴露在高濃度油氣中。'},
+      {id:'xpump',  s:'抽水機回收', text:'拿一般抽水機把地上的油抽進桶子回收', right:false, task:'oilpump',
+       why:'一般抽水機的馬達不是防爆型，火花可能引燃油氣；回收要等火源受控、泡沫覆蓋後，用防爆器材進行。'},
+      {id:'xhole',  s:'開人孔查殘量', text:'打開槽車的人孔蓋，看看裡面還剩多少油', right:false, task:'manhole',
+       why:'翻覆的槽車打開人孔蓋會增加洩漏和油氣外溢；應先關閉緊急停止開關、確認槽體狀態。'},
+    ],
+    key:['ident','isolate','evac','foam','plug','rescue']},
+  S004:{
+    pool:[
+      {id:'power',  s:'通報台電',   text:'請台電派人，從外面的電箱把整間店的電切掉', right:true, task:'power',
+       why:'LPG 最小點火能量極低，冰箱壓縮機、抽油煙機都是火源；原則由台電從外部電箱斷電，通報越早越好。'},
+      {id:'evac',   s:'疏散管制',   text:'把前場客人和隔壁店的人請出去，管制火源和車輛', right:true, task:'evac',
+       why:'ERG 115 初期隔離至少 100 公尺；含鄰店疏散、管制火源與車輛、禁用手機。'},
+      {id:'gasW',   s:'量腰部濃度', text:'用探測器從後門外伸進去，量後廚的濃度', right:true, task:'gasW',
+       why:'氣體看不見也聞不準；沒有讀數，就無法判斷能不能進、能待多久。'},
+      {id:'gasG',   s:'量貼地濃度', text:'探頭壓低，量地板、冰箱下面和排水溝口', right:true, task:'gasG',
+       why:'LPG 比空氣重，會沉在低處；只量腰部會低估風險。'},
+      {id:'vent',   s:'開門窗通風', text:'從外面把後門和窗戶打開，讓味道散出去', right:true, task:'vent',
+       why:'沒有防爆風扇，只能靠自然通風；由上風處外側操作，不進入高濃度區。'},
+      {id:'mist',   s:'水霧稀釋',   text:'拉一條水線，用霧狀的水把氣雲打散', right:true, task:'mist',
+       why:'霧狀水柱稀釋、驅散氣雲（不是對著漏氣點直接沖水）；10–20%LEL 範圍進入也需要水霧待命。'},
+      {id:'valve',  s:'關角閥',     text:'穿好裝備進去，把鋼瓶上的閥門關起來', right:true, task:'valve',
+       why:'先關閥截斷氣源，漏氣停了，濃度才降得下來。'},
+      {id:'move',   s:'搬出鋼瓶',   text:'兩個人把鋼瓶搬到店外空曠的地方', right:true, task:'move',
+       why:'先關閥再搬，2 人搬到戶外空曠處；閥沒關就搬，途中會持續漏氣。'},
+      {id:'rescue', s:'救員工',     text:'電斷了、濃度也降到能進，再進去把倒在裡面的員工拉出來', right:true, task:'rescue',
+       why:'救人心切，但冰箱隨時會啟動；救援人員變成第二批傷患，只會讓情況更糟。'},
+      {id:'xphone', s:'後廚旁用手機', text:'站在後門邊，用手機或無線電跟指揮中心聯絡', right:false, task:'phone',
+       why:'手機與一般無線電不是防爆型，收發訊、開關機可能產生火花；要到管制範圍外使用。'},
+      {id:'xfan',   s:'電風扇送風', text:'拿電風扇對著後廚吹，把瓦斯趕出去', right:false, task:'fan',
+       why:'一般電風扇的馬達與開關會產生火花，而 LPG 的最小點火能量極低。'},
+      {id:'xsw',    s:'自己關電源', text:'衝進去把冰箱和抽油煙機的開關關掉', right:false, task:'sw',
+       why:'開關切斷瞬間有電弧；原則由台電人員從外部電箱斷電，不要自己進去拉開關。'},
+      {id:'xtruck', s:'車開進後巷', text:'把水箱車開到後門口，水管比較好接', right:false, task:'truck',
+       why:'車輛引擎、排氣管與車上電器都是火源，不可開進洩漏範圍；車輛應停在上風處、管制範圍外。'},
+    ],
+    key:['power','evac','gasW','mist','valve','rescue']},
+};
+
+const DECOYS = {
+  S001:[
+    {id:'solo', zone:'室內', name:'單人入室快速搜索一樓', min:1,max:1, dur:90, idlh:true, desc:'先搶時間，一個人進去快速看一圈',
+     gate:()=>!M.shutter&&!M.back?'尚無進入點':M.F>=90?'一樓火勢過大，無法通過':true,
+     why:'違反 2 進 2 出：單人入室沒有人互相照應，迷路或遇險時也沒人能救。',
+     eff:'離開時空氣瓶多耗約 350 秒、沒有搜到任何人；佔用 1 人 90 秒',
+     fin:a=>{ a.crew.forEach(id=>{const c=crewById(id);if(c)c.air=Math.max(1,c.air-350);});
+       log('單人入室後方向感喪失，繞了一圈才找到出口，空氣瓶消耗過快，也沒有搜到任何人。','alert'); }},
+    {id:'ppv', zone:'A面', name:'架設正壓風扇排煙', min:1,max:2, dur:60, desc:'用風扇把一樓的煙吹出去',
+     gate:()=>!M.shutter?'鐵捲門未開':true,
+     why:'火點還沒壓制就灌風，等於幫火助燃，還把煙火推向樓上孩子所在的房間。',
+     eff:'一樓火勢 +12%、樓上煙濃度上升；佔用 1–2 人 60 秒',
+     fin:()=>{ if(M.F>0){M.F=Math.min(100,M.F+12);} M.St+=8; M.C3+=15;
+       log('風扇把大量空氣灌進起火的一樓，火勢明顯增強，濃煙被推向樓上！','alert'); }},
+    {id:'expo', zone:'車輛／水源', name:'對鄰房外牆灑水保護', min:1,max:2, dur:60, desc:'避免火勢延燒到相連的鄰房',
+     gate:()=>!M.line?'水線未佈設':!has('pump')?'無人操作泵浦':!src1()?'1號車無水':true,
+     why:'水只有 2,000 公升，要先用在起火處壓制火勢；火滅了，延燒的問題也就解決。',
+     eff:'無消防栓供水時，白白浪費約 500 公升水；佔用 1–2 人 60 秒',
+     fin:()=>{ if(!M.hydrant){M.tank1=Math.max(0,M.tank1-500);log('水線對著鄰房外牆灑了一分鐘，白白用掉約 500 公升水，1號車水量更吃緊。','alert');}
+       else log('水線對著鄰房外牆灑了一分鐘；水量有消防栓供應所以沒有短缺，但人員與水線被占住。','alert'); }},
+    {id:'extg', zone:'A面', name:'滅火器壓制門口火勢', min:1,max:1, dur:45, desc:'用手提滅火器先壓住門縫的火',
+     gate:()=>!M.shutter?'鐵捲門未開':true,
+     why:'火已在室內發展，手提滅火器容量小、約十幾秒就噴完，壓不住，還讓人暴露在門口的濃煙與熱氣中。',
+     eff:'毫無效果、白白耗掉 45 秒（期間火勢持續成長）；佔用 1 人'},
+  ],
+  S002:[
+    {id:'wash', zone:'外圍／交通', name:'以水線對引擎室噴水降溫', min:1,max:1, dur:30, desc:'壓下引擎室的白煙與高溫',
+     gate:()=>!M.outer?'需先完成外圈評估':M.carFire?'車輛起火中，先撲滅火勢':true,
+     why:'汽油遇水會漂浮擴散，水流還把油帶進邊溝，漏油範圍反而變大。',
+     eff:'起火風險 +12%、漏油擴散；佔用 1 人 30 秒',
+     fin:()=>{ M.risk=Math.min(98,M.risk+12);
+       log('水柱把汽油沖得更散，漏油範圍擴大，引擎室的汽油味更重（起火風險上升）。','alert'); }},
+    {id:'drag', zone:'車內', name:'徒手將駕駛由座位拉出', min:2,max:2, dur:40, desc:'不等器材，先把人拉出來',
+     gate:()=>!M.innerDone?'需先完成內圈評估':V('drv').status!=='trapped'?'已移出':true,
+     why:'雙腿被儀表板夾住，硬拉會加重腿部與脊椎傷害，也拉不出來。',
+     eff:'駕駛 hp -20，並計入「移出時未做頸椎保護」；佔用 2 人 40 秒',
+     fin:()=>{ const d=V('drv'); if(d.status==='trapped'){d.hp-=20;} M.ck.spinal.push('駕駛（徒手硬拉）');
+       log('駕駛雙腿仍被儀表板夾住，硬拉失敗，腿部與頸椎的傷勢加重！','alert'); }},
+    {id:'truck', zone:'外圍／交通', name:'請砂石車司機倒車移開', min:1,max:1, dur:30, desc:'淨空車道、增加作業空間',
+     gate:()=>!M.outer?'需先完成外圈評估':true,
+     why:'兩車卡在一起，擅自移動會牽動小客車位移、破壞已做好的穩固，也毀損現場跡證。',
+     eff:'車輛穩固失效（要重做）、駕駛 hp -10；佔用 1 人 30 秒',
+     fin:()=>{ M.stable=false; const d=V('drv'); if(d.status==='trapped'){d.hp-=10;}
+       log('砂石車一動，卡住的小客車被拉動位移，墊塊與支撐失效，必須重新穩固！','alert'); }},
+    {id:'grind', zone:'破壞解困', name:'以砂輪機直接切開 A 柱', min:2,max:2, dur:60, desc:'手持砂輪機切割，比油壓器材更快',
+     gate:()=>M.carFire?'車輛起火中，先滅火':!M.outer?'需先完成外圈評估':true,
+     why:'切割火花落在漏油與汽油蒸氣旁，起火風險大增；應使用油壓破壞器材，並先斷電、警戒。',
+     eff:'起火風險 +20%、駕駛 hp -5；佔用 2 人 60 秒',
+     fin:()=>{ M.risk=Math.min(98,M.risk+20); const d=V('drv'); if(d.status==='trapped'){d.hp-=5;}
+       log('砂輪機的火花濺在漏油旁，引擎室冒出更濃的白煙，起火風險大增！','alert'); }},
+  ],
+  S003:[
+    {id:'hose', zone:'水源／泡沫', name:'以水線沖洗路面油污', min:1,max:2, dur:45, desc:'把路面的油沖乾淨，減少油氣',
+     gate:()=>!M.line?'水線未佈設':!has('pump')?'無人操作泵浦':M.water<=0?'無水':true,
+     why:'汽油比水輕又不溶於水，水柱只會把油沖散、帶進排水溝流向大海，還沖掉泡沫覆蓋。',
+     eff:'油量 +300 L、泡沫覆蓋率 -30、用水 800 L；尚未封堵排水溝時油品流入水溝（計入「防止油品流入排水溝」未通過）；佔用 1–2 人 45 秒',
+     fin:()=>{ M.water=Math.max(0,M.water-800); M.pool+=300; M.cov=Math.max(0,M.cov-30);
+       if(!M.dike&&M.ck.drainSpill==null) M.ck.drainSpill=S.t;
+       log(M.dike?'水柱把汽油沖散，泡沫覆蓋被沖掉一部分，用掉 800 公升水；所幸排水溝已封堵。':'水柱把汽油沖散並帶進排水溝，往海邊流去，泡沫覆蓋也被沖掉一部分！','alert'); }},
+    {id:'photo', zone:'熱區作業', name:'近距離拍攝槽車並採集油樣', min:1,max:1, dur:60, idlh:true, hot:true, start:()=>entry3(), desc:'拍照存證、採樣送驗',
+     gate:()=>M.fire?'起火中':true,
+     why:'未辨識、未偵測就進熱區近距離停留：一般手機相機與取樣動作有靜電與火花風險，人員也直接暴露在高濃度油氣中。',
+     eff:'呼吸器多耗氣約 250 秒；若尚未辨識物質，計入「進入熱區前完成辨識」未通過；佔用 1 人 60 秒',
+     fin:a=>{ a.crew.forEach(id=>{const c=crewById(id);if(c)c.air=Math.max(1,c.air-250);});
+       log('在洩漏區近距離逗留，油氣濃度高、呼吸器耗氣特別快，採到的樣品也用不上。','alert'); }},
+    {id:'oilpump', zone:'水源／泡沫', name:'以抽水機抽取路面油品回收', min:1,max:2, dur:60, desc:'把流出來的油抽回桶子，減少污染',
+     gate:()=>M.fire?'起火中':true,
+     why:'一般抽水機的馬達不是防爆型，火花可能引燃油氣；回收要等火源受控、泡沫覆蓋後，用防爆器材進行。',
+     eff:'啟動時有 10% 機率火花點燃油氣（油池起火）；佔用 1–2 人 60 秒',
+     run:()=>{ if(M.cov<80&&!M.fire&&M.ck.ignition==null&&Math.random()<0.1) ignite3('一般抽水機的馬達火花點燃油氣');
+       else log('一般抽水機不是防爆型，馬達火花隨時可能引燃油氣——這次沒有點燃，純屬運氣。','alert'); }},
+    {id:'manhole', zone:'熱區作業', name:'開啟人孔蓋檢查槽內殘量', min:2,max:2, dur:90, idlh:true, hot:true, start:()=>entry3(), desc:'確認槽內剩多少油，估算洩漏總量',
+     gate:()=>M.fire?'起火中':true,
+     why:'翻覆的槽車打開人孔蓋，會增加洩漏量與油氣外溢；應先關閉緊急停止開關、確認槽體狀態。',
+     eff:'洩漏速率 +1.0 L/s；佔用 2 人 90 秒',
+     fin:()=>{ M.leak+=1.0; log('人孔蓋一開，槽內油氣和油品外溢，洩漏量明顯增加！','alert'); }},
+  ],
+  S004:[
+    {id:'phone', ref:true, own:true, zone:'管制／聯絡', name:'在後廚附近用手機／無線電聯絡', min:1,max:1, dur:5, desc:'就近回報與聯絡',
+     why:'手機與一般無線電不是防爆型，開關機或收發訊都可能產生火花。',
+     eff:'視為一次點火事件（權重 0.25 × 氣爆機率函數）；任務取消，計入「未使用非防爆器材」'},
+    {id:'fan', ref:true, own:true, zone:'偵檢／稀釋', name:'架設電動送風機／風扇', min:1,max:2, dur:5, desc:'強制換氣，加速降低濃度',
+     why:'一般電風扇的馬達與開關會產生火花，而 LPG 的最小點火能量極低。',
+     eff:'視為一次點火事件（權重 1.0，台電斷電後為 0 × 氣爆機率函數）；任務取消，計入「未使用非防爆器材」'},
+    {id:'sw', ref:true, own:true, zone:'後廚作業', name:'進入後廚關閉電源開關', min:1,max:2, dur:5, desc:'自己切斷冰箱與抽油煙機的電',
+     why:'開關切斷瞬間會有電弧；原則由台電人員從外部電箱斷電。',
+     eff:'視為一次點火事件（權重 1.0，台電斷電後為 0 × 氣爆機率函數）；任務取消，計入「未在室內操作電源開關」'},
+    {id:'truck', own:true, zone:'管制／聯絡', name:'將水箱車開到後門口備便', min:1,max:1, dur:5, desc:'縮短水線距離，方便供水',
+     gate:()=>true,
+     start:trap4('nonEx','水箱車的引擎、排氣管與車上電器都是火源！不可開進洩漏範圍，車輛應停在上風處、管制範圍外。已取消。',0.5,'水箱車引擎的火花'),
+     why:'車輛引擎、排氣管與車上電器都是火源，不可開進洩漏範圍。',
+     eff:'視為一次點火事件（權重 0.5 × 氣爆機率函數）；任務取消，計入「未使用非防爆器材」'},
+  ],
+};
+
+const shuffle = arr => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; };
+const cardMap = () => { const m={}; PLANS[S.sc.id].pool.forEach(c=>m[c.id]=c); return m; };
+/* 把誘餌轉成一般任務物件（外觀與真任務相同，不加任何標記）；ref 類沿用情境原有的陷阱任務，不另建 */
+function mkDecoyTask(d){
+  const t={id:d.id, zone:d.zone, name:d.name, min:d.min, max:d.max, dur:d.dur, desc:d.desc,
+    avail:d.own?d.gate:()=>S.chal.fin[d.id]?'已完成':d.gate()};
+  if(d.idlh) t.idlh=true;
+  if(d.hot) t.hot=true;
+  if(d.start) t.start=d.start;
+  if(!d.own) t.done=a=>decoyDone(d,a);
+  return t;
+}
+function newChal(scId){
+  const ch={pool:shuffle(PLANS[scId].pool.slice()), plan:[], decoy:{}, fin:{}, defs:[]};
+  DECOYS[scId].forEach(d=>{ ch.decoy[d.id]=d; if(!d.ref) ch.defs.push(mkDecoyTask(d)); });
+  return ch;
+}
+/* 誘餌被點下去、選好人那一刻：記帳＋警示＋後果（同一個誘餌只算第一次） */
+function decoyHit(t,a){
+  const d=S.chal.decoy[t.id]; if(!d) return;
+  const first=!S.ck.decoyHits.some(h=>h.id===d.id);
+  if(first) S.ck.decoyHits.push({id:d.id, name:d.name, t:S.t, why:d.why, eff:d.eff});
+  if(d.own) return;                      /* 自帶後果的陷阱任務：提示與後果由任務本身處理 */
+  if(first){ log(`${names(a.crew)}：${d.name}。這個處置不適當：${d.why}`,'alert'); if(d.run) d.run(a); }
+  toast('這個處置不適當：'+d.why, 4500);
+}
+function decoyDone(d,a){
+  S.chal.fin[d.id]=true;
+  if(d.fin) d.fin(a); else log(`${names(a.crew)}：${d.name}結束，沒有任何幫助，白白耗掉 ${a.total} 秒。`,'alert');
+}
+const markStart = t => { if(S.ck.started[t.id]==null) S.ck.started[t.id]=S.t; };
+/* 計畫項目實際啟動的時間點（初報／增援另外記）；沒做過回傳 null */
+function planTime(id){
+  const c=S.ck;
+  if(id==='report') return c.report;
+  if(id==='reinf') return c.reinforce;
+  return c.started[id]==null?null:c.started[id];
+}
+
+/* ---------- 擬定處置計畫（開局、時間流動之前） ---------- */
+function openPlan(){
+  S.choiceOpen=true;
+  $('#planBrief').textContent=S.sc.brief;
+  const im=$('#planImg'); im.style.display=''; im.alt=S.sc.title+'現場示意圖'; im.src=`sc-${S.sc.id}.jpg`;
+  renderPlan(); $('#plan').classList.add('show'); $('#plan').scrollTop=0; beep();
+}
+function renderPlan(){
+  const ch=S.chal, by=cardMap(), n=ch.plan.length;
+  $('#planPool').innerHTML=ch.pool.map(c=>{const i=ch.plan.indexOf(c.id);
+    return `<button type="button" class="pcard${i>=0?' on':''}" data-id="${c.id}" aria-pressed="${i>=0}">${i>=0?`<i>${i+1}</i>`:''}${c.text}</button>`;}).join('');
+  $('#planMine').innerHTML=n?ch.plan.map((id,i)=>`<li class="pitem" data-id="${id}"><span class="pno">${i+1}</span><span class="ptx">${by[id].text}</span>
+      <span class="pbtns"><button type="button" class="pb" data-act="up"${i===0?' disabled':''}>▲ 上移</button><button type="button" class="pb" data-act="dn"${i===n-1?' disabled':''}>▼ 下移</button><button type="button" class="pb" data-act="rm">✕ 移除</button></span></li>`).join('')
+    :'<li class="pempty">還沒有選擇。點上面的處置卡片，加入你的計畫。</li>';
+  $('#planCnt').textContent=n>=3?`已選 ${n} / 5 項`:`已選 ${n} / 5 項（至少 3 項，還差 ${3-n} 項）`;
+  $('#bPlanGo').disabled=n<3;
+}
+$('#planPool').onclick=e=>{
+  const b=e.target.closest('.pcard'); if(!b||!S||!S.chal) return;
+  const ch=S.chal, i=ch.plan.indexOf(b.dataset.id);
+  if(i>=0) ch.plan.splice(i,1);
+  else if(ch.plan.length>=5){ toast('最多選 5 項，請先移除一項'); return; }
+  else ch.plan.push(b.dataset.id);
+  renderPlan();
+};
+$('#planMine').onclick=e=>{
+  const b=e.target.closest('.pb'); if(!b||!S||!S.chal) return;
+  const ch=S.chal, id=b.closest('.pitem').dataset.id, i=ch.plan.indexOf(id);
+  if(b.dataset.act==='rm') ch.plan.splice(i,1);
+  else { const j=b.dataset.act==='up'?i-1:i+1; if(j<0||j>=ch.plan.length) return; [ch.plan[i],ch.plan[j]]=[ch.plan[j],ch.plan[i]]; }
+  renderPlan();
+};
+$('#bPlanGo').onclick=()=>{
+  if(!S||!S.chal||S.chal.plan.length<3) return;
+  $('#plan').classList.remove('show'); S.choiceOpen=false;
+  log(`帶隊官擬定處置計畫（${S.chal.plan.length} 項），開始演練。`,'cmd');
+  render(); if(S.sc.onStart) S.sc.onStart();
+};
+
+/* ---------- 挑戰模式的 AAR ---------- */
+function chalItems(){
+  const ch=S.chal, key=PLANS[S.sc.id].key, by=cardMap(), pl=ch.plan.map(id=>by[id]), top=pl.slice(0,3);
+  const hit=top.filter(c=>c.right&&key.includes(c.id)).length, bad=pl.filter(c=>!c.right);
+  const miss=top.filter(c=>planTime(c.task)==null), dh=S.ck.decoyHits;
+  return [
+    ['計畫命中標準處置', hit>=2, `前 3 項中有 ${hit} 項是標準處置（你的計畫：${pl.map(c=>c.s).join('→')}）`, '開局先自己想好最優先的處置，而不是看到清單才選；前 3 項至少 2 項是標準處置才算通過。'],
+    ['計畫未含誘餌處置', bad.length===0, bad.length?`計畫含不適當的處置：${bad.map(c=>c.s).join('、')}`:'計畫中沒有不適當的處置', '看似合理、其實不安全或當下不該做的處置，要在計畫階段就排除。'],
+    ['計畫與實際一致', miss.length===0, miss.length?`計畫前 3 項沒有執行：${miss.map(c=>c.s).join('、')}`:'計畫前 3 項都有執行', '現場變化可以調整計畫，但自己排在最前面的項目要確實做到。'],
+    ['未執行不適當處置（誘餌）', dh.length===0, dh.length?`執行了：${dh.map(h=>`${h.name}（${ft(h.t)}）`).join('、')}`:'無', '任務清單裡有些處置看似合理，依 SOP 或物質特性卻是錯的或當下不該做；每一項都要先問「為什麼要做」。'],
+  ];
+}
+function planAAR(){
+  const ch=S.chal, key=PLANS[S.sc.id].key, by=cardMap();
+  const ic=x=>x===true?'<span class="ic pass">✓</span>':x===false?'<span class="ic fail">✕</span>':'<span class="ic na">－</span>';
+  const act=id=>{const t=planTime(by[id].task);return t==null?'演練中未執行':'實際執行 '+ft(t);};
+  const mine=ch.plan.map((id,i)=>{const c=by[id];
+    return `<div class="ck">${ic(c.right)}<div><b>${i+1}. ${c.text}</b>：${c.right?(key.includes(id)?'標準處置':'合理做法，但不在標準前列'):'不適當的處置'}｜${act(id)}</div><small>${c.why}</small></div>`;}).join('');
+  const std=key.map((id,i)=>{const n=ch.plan.indexOf(id);
+    return `<div class="ck">${ic(n>=0)}<div><b>${i+1}. ${by[id].text}</b>：${n>=0?`你的計畫第 ${n+1} 項`:'你的計畫沒有排入'}｜${act(id)}</div><small>${by[id].why}</small></div>`;}).join('');
+  const dh=S.ck.decoyHits.map(h=>`<div class="ck">${ic(false)}<div><b>${h.name}</b>：${ft(h.t)} 執行</div><small>為什麼不適當：${h.why}${h.eff?`（後果：${h.eff}）`:''}</small></div>`).join('');
+  return `<h2>我的計畫 vs 實際 vs 標準</h2>
+    <h3 class="plh">你的計畫（依你排的優先順序）</h3>${mine}
+    <h3 class="plh">標準優先順序</h3>${std}
+    <h3 class="plh">演練中實際做了的不適當處置</h3>${dh||'<p class="hint">沒有。</p>'}`;
+}
+
 /* ================= 引擎 ================= */
 const SUP_ETA = 180;   // 呼叫支援單位後抵達所需秒數
 const unitCrew = (u,n) => Array.from({length:n||3},(_,i)=>i===0?[u+'隊長',u+'帶']:[u+'隊員'+i,u+i]).map((c,i)=>({id:'x'+u+i,u,name:c[0],ab:c[1],cmd:false,task:null,inside:false,air:AIR,gone:false,note:''}));
@@ -1444,7 +1832,9 @@ function newState(scId,n,mode,extra,sizes){
     victims:sc.victims.map(v=>({...v,status:'trapped',known:!!v.known})),
     reinf:{req:null,arrived:false},
     sup:{have:['A','B'].slice(0,extra),pend:[]},
-    ck:{report:null,reportEval:null,reinforce:null,par:[],cmdBusy:0,minOut:null,mayday:null,transportSolo:false,rit:null}};
+    ck:{report:null,reportEval:null,reinforce:null,par:[],cmdBusy:0,minOut:null,mayday:null,transportSolo:false,rit:null,started:{},decoyHits:[]}};
+  S.chal=mode==='challenge'?newChal(scId):null;          /* 挑戰模式專用狀態；其他模式為 null，不影響原有流程 */
+  S.tasks=S.chal?[...sc.tasks,...S.chal.defs]:sc.tasks;  /* 挑戰模式的任務清單＝原任務＋誘餌 */
   M=S.m={}; sc.init();
 }
 
@@ -1452,7 +1842,7 @@ function clickTask(t){
   if(S.over||S.choiceOpen) return;
   if(has(t.id)){toast('這個任務執行中，要改派請先在人員卡按「撤回」');return;}
   const r=t.avail(); if(r!==true){ if(S.sc.onBlock) S.sc.onBlock(t,r); toast(r); return; }
-  if(t.cmd){ log(`帶隊官：${t.name}`,'cmd'); if(t.done) t.done(); render(); return; }   /* 指揮類任務：不需選人，立即生效 */
+  if(t.cmd){ markStart(t); log(`帶隊官：${t.name}`,'cmd'); if(t.done) t.done(); render(); return; }   /* 指揮類任務：不需選人，立即生效 */
   const ids=[...selected].filter(id=>{const c=crewById(id);return c&&!c.task&&!c.gone;});
   if(new Set(ids.map(id=>crewById(id).u)).size>1){toast('不同單位的人員不能一起執行同一任務');return;}
   if(!ids.length){toast('先點選待命人員，再點任務');return;}
@@ -1466,6 +1856,7 @@ function clickTask(t){
   S.active.push(a);
   ids.forEach(id=>{const c=crewById(id);c.task=a.key;c.inside=!!t.idlh;});
   log(`${names(ids)}：${t.name}${a.pf?`（延續先前已完成的 ${Math.round(a.pf*100)}%，剩約 ${a.total} 秒）`:''}`,'cmd');
+  markStart(t); if(S.chal) decoyHit(t,a);
   if(t.start) t.start(a);
   selected.clear(); render();
 }
@@ -1571,12 +1962,14 @@ function tick(){
 
 /* ---------- 畫面 ---------- */
 function render(){renderTop();renderScene();renderCrew();updateTasks();}
+const modeTxt = m => m==='exam'?'考核':m==='challenge'?'挑戰':'練習';
+const noPause = () => S.mode==='exam'||S.mode==='challenge';   /* 考核與挑戰都不可暫停 */
 function renderTop(){
-  $('#clock').innerHTML=`T+${fmt(S.t)}<small>${S.mode==='exam'?'考核':'練習'}${S.paused?'｜已暫停':''}</small>`;
+  $('#clock').innerHTML=`T+${fmt(S.t)}<small>${modeTxt(S.mode)}${S.paused?'｜已暫停':''}</small>`;
   const r=S.reinf, rf=S.sc.reinforce;
   const rTxt=r.req==null?'未請求':r.arrived?'已到場':`約 ${fmt(Math.max(0,r.req+rf.eta-S.t))}`;
   $('#gauges').innerHTML=[...S.sc.gauges(), `增援 <b>${rTxt}</b>`, ...(S.sup.pend.length?[`支援單位 <b>${S.sup.pend.map(p=>p.u+'隊 '+fmt(Math.max(0,p.at-S.t))).join('、')}</b>`]:[]), `救護車 <b>${S.amb>0?S.amb+' 輛在場':'已後送'}</b>`].map(g=>`<span>${g}</span>`).join('');
-  $('#bPause').style.display=S.mode==='exam'?'none':'';
+  $('#bPause').style.display=noPause()?'none':'';
   $('#bPause').textContent=S.paused?'繼續':'暫停';
   const sl=supLeft().length; $('#bSup').textContent=sl?`呼叫支援單位（剩 ${sl}）`:'支援單位已調派'; $('#bSup').disabled=!sl||S.over;
   $('#bSound').textContent=`提示音：${soundOn?'開':'關'}`;
@@ -1681,7 +2074,9 @@ function buildTasks(){
     const d=document.createElement('div'); d.className='zone'; d.dataset.z=z;
     d.innerHTML=`<div class="tasks"></div><p class="hint empty" hidden>這一區目前沒有任務。</p>`;
     const g=d.querySelector('.tasks');
-    sc.tasks.filter(t=>t.zone===z).forEach(t=>{
+    const zl=S.tasks.filter(t=>t.zone===z);
+    if(S.chal) shuffle(zl);   /* 挑戰模式：分區內順序打散，誘餌與真任務混排 */
+    zl.forEach(t=>{
       g.appendChild(mkTaskBtn(t));
     });
     wrap.appendChild(d);
@@ -1690,7 +2085,7 @@ function buildTasks(){
 }
 function updateTasks(){
   const cnt={},urg={},vis={},run={};
-  S.sc.tasks.forEach(t=>{
+  S.tasks.forEach(t=>{
     const b=document.querySelector(`.task[data-id="${t.id}"]`); if(!b) return;
     const ra=actOf(t.id)[0];
     if(ra){
@@ -1766,6 +2161,7 @@ function aarItems(){
     ...sc.checks(),
     ['PAR 人員點名', c.par.length>0, c.par.length?`${c.par.length} 次`:'未點名', '狀況轉變（進入危險區、出現警訊、撤退）後都應點名。'],
     ['指揮官投入作業時間', null, `${c.cmdBusy} 秒`, '人少時帶隊官動手是常態，但投入越久，越沒有人在看全局。'],
+    ...(S.chal?chalItems():[]),   /* 挑戰模式才有的計畫與誘餌檢核 */
   ];
 }
 const stTxt = v => v.status==='trapped'?(v.known?'仍受困':'未被發現'):({out:'已救出（現場）',transported:'已後送',dead:'死亡'})[v.status];
@@ -1782,11 +2178,12 @@ function showAAR(){
     <table class="vt">${vrows}</table>
     <h2>檢核點</h2>
     ${items.map(i=>`<div class="ck">${icon(i[1])}<div><b>${i[0]}</b>：${i[2]}</div><small>${i[3]}</small></div>`).join('')}
+    ${S.chal?planAAR():''}
     ${S.sc.id==='S003'?`<h2>延伸閱讀</h2><p>想確認自己的估算對不對？請查閱：<a href="https://sites.google.com/view/ttfd003003/%E6%90%B6%E6%95%91/%E5%8C%96%E5%AD%B8%E7%81%BD%E5%AE%B3/%E6%A7%BD%E8%BB%8A%E5%9C%96%E5%8D%A1%E8%88%87%E6%B3%A1%E6%B2%AB%E8%A8%88%E7%AE%97" target="_blank" rel="noopener">槽車圖卡與泡沫計算</a>（槽車辨識、緊急遮斷閥位置、泡沫原液與水量計算）。</p>`:''}
     ${S.sc.card?S.sc.card():''}
     <h2>時間軸</h2>
     <div class="tl">${[...S.log].reverse().map(l=>`<div><time>T+${fmt(l.t)}</time>${l.msg}</div>`).join('')}</div>
-    <div class="row"><button class="btn go" id="bAgain" type="button">再演練一次</button><button class="btn" id="bSetup" type="button">換情境</button><button class="btn" id="bClose" type="button">回到現場畫面</button><button class="btn" id="bImg" type="button">儲存報告圖片</button><button class="btn" id="bResend" type="button">重新上傳</button><button class="btn" id="bFbAar" type="button">意見回饋</button></div>`;
+    <div class="row"><button class="btn go" id="bAgain" type="button">再演練一次</button><button class="btn" id="bSetup" type="button">換情境</button><button class="btn" id="bClose" type="button">回到現場畫面</button><button class="btn" id="bImg" type="button">儲存報告圖片</button><button class="btn" id="bResend" type="button" hidden>重新上傳</button><button class="btn" id="bFbAar" type="button">意見回饋</button></div>`;
   $('#bFbAar').onclick=openFb;
   $('#aar').classList.add('show');
   $('#bAgain').onclick=()=>startGame(S.sc.id,S.n,S.mode,S.extra,S.sizes);
@@ -1797,6 +2194,7 @@ function showAAR(){
   sendAAR(items);
 }
 /* 上傳到 GAS：錯開時間、失敗自動重試；只有真的收到成功回應才算成功（後台以編號去重，重送是安全的） */
+const modeOut = m => m==='challenge'?'挑戰':m;   /* 上傳用的模式文字：挑戰模式直接送中文 */
 const sleepMs = ms => new Promise(r=>setTimeout(r,ms));
 async function postGAS(payload, onStatus, jitterMax){
   const opt={method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)};
@@ -1823,7 +2221,7 @@ async function sendAAR(items){
   const c=S.ck;
   const payload={
     ver:VERSION, runId:S.runId, name:S.tester.name, unit:S.tester.unit, scenario:`${S.sc.id} ${S.sc.title}`,
-    crew:S.n, extraUnits:S.extra, unitSizes:S.extra?['A','B'].slice(0,S.extra).map(u=>u+S.sizes[u]).join(','):'', mode:S.mode, reason:S.endReason, duration:S.t,
+    crew:S.n, extraUnits:S.extra, unitSizes:S.extra?['A','B'].slice(0,S.extra).map(u=>u+S.sizes[u]).join(','):'', mode:modeOut(S.mode), reason:S.endReason, duration:S.t,
     saved:S.victims.filter(v=>(v.status==='out'||v.status==='transported')&&v.hp>0).length, total:S.victims.length,
     victims:S.victims.map(v=>({name:v.name,status:stTxt(v)+(v.status==='dead'?'':`（${hpTxt(v.hp)}）`)})),
     flashover:(S.sc.id==='S001'&&M.ck.flashover!=null)?M.ck.flashover:null, mayday:c.mayday,
@@ -1831,10 +2229,11 @@ async function sendAAR(items){
     passCount:items.filter(i=>i[1]===true).length, checkCount:items.filter(i=>i[1]!==null).length,
     log:[...S.log].reverse()
   };
+  { const rb=$('#bResend'); if(rb) rb.hidden=true; }
   const res=await postGAS(payload, m=>{const e=$('#sendStatus'); if(e) e.textContent=m;}, 8000);
   const e2=$('#sendStatus'); if(!e2) return;
   if(res.ok){ S.sent=true; e2.textContent=res.dup?'✓ 此紀錄先前已上傳。':'✓ 已上傳到 Google Sheets。'; }
-  else e2.textContent='⚠ 尚未確認上傳成功（後台忙碌或網路不穩）。請稍後按「重新上傳」，重複上傳不會產生重複紀錄。';
+  else { e2.textContent='⚠ 尚未確認上傳成功（後台忙碌或網路不穩）。請稍後按「重新上傳」，重複上傳不會產生重複紀錄。'; const rb=$('#bResend'); if(rb) rb.hidden=false; }
 }
 
 /* ---------- AAR 報告圖片 ---------- */
@@ -1860,7 +2259,7 @@ function aarCanvas(items){
   y+=34;
 
   const info=[['受訓人員',`${S.tester.name||'未填'}${S.tester.unit?'（'+S.tester.unit+'）':''}`],['演練日期',dstr],['情境代碼',S.sc.id],
-    ['出勤人數',`${S.n} 人${S.extra?`＋支援 ${['A','B'].slice(0,S.extra).map(u=>u+'隊'+S.sizes[u]+'人').join('、')}`:''}`],['模式',S.mode==='exam'?'考核':'練習'],['演練時間',`T+${fmt(S.t)}`]];
+    ['出勤人數',`${S.n} 人${S.extra?`＋支援 ${['A','B'].slice(0,S.extra).map(u=>u+'隊'+S.sizes[u]+'人').join('、')}`:''}`],['模式',modeTxt(S.mode)],['演練時間',`T+${fmt(S.t)}`]];
   const colW=(W-P*2)/3;
   info.forEach((it,i)=>{const x=P+(i%3)*colW, yy=y+Math.floor(i/3)*82; text(it[0],x,yy,20,'#5b6672',600); wrap(it[1],x,yy+28,colW-20,27,34,'#16202a',700);});
   y+=82*2+6;
@@ -1895,6 +2294,17 @@ function aarCanvas(items){
     y=Math.max(yy,y+40)+12; rule(y); y+=18;});
   y+=14;
 
+  if(S.chal){
+    const key=PLANS[S.sc.id].key, by=cardMap(), act=id=>{const t=planTime(by[id].task);return t==null?'未執行':ft(t);};
+    y=section('我的計畫 vs 實際 vs 標準',y);
+    text('你的計畫',P,y,22,'#5b6672',700); y+=34;
+    S.chal.plan.forEach((id,i)=>{const c=by[id]; y=wrap(`${i+1}. ${c.text}　［${c.right?'正確':'不適當'}］實際：${act(id)}`,P,y,W-P*2,22,31,c.right?'#16202a':'#c8102e',600)+4;});
+    y+=10; text('標準優先順序',P,y,22,'#5b6672',700); y+=34;
+    key.forEach((id,i)=>{ y=wrap(`${i+1}. ${by[id].text}　實際：${act(id)}`,P,y,W-P*2,22,31,'#16202a',400)+4;});
+    if(S.ck.decoyHits.length){ y+=10; text('實際做了的不適當處置',P,y,22,'#5b6672',700); y+=34;
+      S.ck.decoyHits.forEach(h=>{ y=wrap(`${h.name}（${ft(h.t)}）：${h.why}`,P,y,W-P*2,22,31,'#c8102e',600)+4; }); }
+    y+=14;
+  }
   y=section('時間軸',y);
   const colT={alert:'#c8102e',good:'#23824f',radio:'#1f6fb2',cmd:'#6b7480',info:'#16202a'};
   const logs=[...S.log].reverse();
@@ -1949,7 +2359,7 @@ async function sendFb(){
   const d={type:'feedback', ver:VERSION, fbId:(fbIdCur=fbIdCur||Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     name:$('#optName').value.trim()||'未填', unit:$('#optUnit').value.trim(), scenario:g('#fbSc'),
     real:g('#fbReal'), diff:g('#fbDiff'), timing:g('#fbTime'), bad:g('#fbBad'), sug:g('#fbSug'),
-    runId:(S&&S.t>0)?S.runId:'', mode:(S&&S.t>0)?S.mode:''};
+    runId:(S&&S.t>0)?S.runId:'', mode:(S&&S.t>0)?modeOut(S.mode):''};
   if(!d.real&&!d.diff&&!d.timing&&!d.bad&&!d.sug){st.textContent='請至少填寫一個欄位。';return;}
   if(!GAS_URL){st.textContent='尚未設定 Google Sheets 網址，無法送出。';return;}
   st.textContent='送出中…'; $('#bFbSend').disabled=true;
@@ -1990,11 +2400,12 @@ function startGame(scId,n,mode,extra,sizes){
   $('#crew').dataset.n=''; buildTasks(); buildReportForm();
   $('#scTitle').innerHTML=`${S.sc.title} <span>${S.sc.hint}</span>`;
   document.title=`${S.sc.title}｜消防指揮情境訓練`;
-  ['#start','#aar','#report','#choice','#feedSheet','#imgSheet'].forEach(id=>$(id).classList.remove('show'));
+  ['#start','#aar','#report','#choice','#plan','#feedSheet','#imgSheet'].forEach(id=>$(id).classList.remove('show'));
   log(S.sc.arrival(n),'radio');
   if(extra) log(`同時抵達：${['A','B'].slice(0,extra).map(u=>u+'隊（'+sizes[u]+'人）').join('、')}。各單位不併組作業。`,'radio');
   render(); setSpeed(1);
-  if(S.sc.onStart) S.sc.onStart();
+  if(S.chal) openPlan();   /* 挑戰模式：先擬定計畫，確認後才呼叫 onStart、時間才開始流動 */
+  else if(S.sc.onStart) S.sc.onStart();
 }
 
 function renderEx(){const n=+$('#optExtra').value;$('#exTxt').textContent=n?`本隊＋${['A','B'].slice(0,n).join('、')} 隊（共 ${n+1} 個單位）`:'只有本隊';$('#exSizes').style.display=n?'flex':'none';$('#szBwrap').style.display=n>=2?'':'none';$('#bExM').disabled=n<=0;$('#bExP').disabled=n>=2;}
@@ -2032,11 +2443,15 @@ renderScList();
 try{const t=JSON.parse(localStorage.getItem('fgc_tester')||'null');if(t){$('#optName').value=t.nm||'';$('#optUnit').value=t.un||'';}}catch(e){}
 $('#bSup').onclick=callSupport;
 $('#bIntro').onclick=()=>{const v=$('#introVid');v.style.display='block';v.play().catch(()=>{});};
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
+  $('#optMode').value=b.dataset.mode;
+  document.querySelectorAll('.mode').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-checked',on);});
+});
 $('#bStart').onclick=()=>{beep();startGame();};
 $('#bBack').onclick=()=>showStep('pick');
 $('#bSendReport').onclick=sendReport;
 $('#bCancelReport').onclick=()=>$('#report').classList.remove('show');
-$('#bPause').onclick=()=>{if(!S||S.mode==='exam'||S.over||S.choiceOpen)return;S.paused=!S.paused;renderTop();};
+$('#bPause').onclick=()=>{if(!S||noPause()||S.over||S.choiceOpen)return;S.paused=!S.paused;renderTop();};
 $('#bSound').onclick=()=>{soundOn=!soundOn;if(S)renderTop();if(soundOn)beep();};
 document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{if(S&&!S.over)setSpeed(+b.dataset.sp);});
 $('#bEnd').onclick=()=>{if(S&&!S.over&&confirm('確定結束演練並進行事後檢討？'))endGame('帶隊官結束演練');};
