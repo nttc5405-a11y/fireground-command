@@ -248,6 +248,7 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
 .v5t[data-tag="R"]{border-color:#c8102e;color:#c8102e}.v5t[data-tag="Y"]{border-color:#e39b00;color:#8a5d00}.v5t[data-tag="G"]{border-color:#23824f;color:#23824f}.v5t[data-tag="B"]{border-color:#16202a;color:var(--ink)}
 .v5t.on[data-tag="R"]{background:#c8102e;color:#fff}.v5t.on[data-tag="Y"]{background:#e39b00;color:#16202a}.v5t.on[data-tag="G"]{background:#23824f;color:#fff}.v5t.on[data-tag="B"]{background:#16202a;color:#fff}
 .v5t.na{opacity:.4}
+.v5t.clr{flex:0 0 auto;padding:0 10px;font-size:12.5px;font-weight:600;border-color:var(--line);color:var(--muted)}
 .v5-acts{display:flex;flex-wrap:wrap;gap:4px}
 .v5b{min-height:34px;padding:3px 10px;border:1px solid var(--line);background:var(--chip);border-radius:4px;font-size:13px;cursor:pointer}
 .v5b.na{opacity:.45}
@@ -344,7 +345,7 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
       <div id="plBody">
         <details class="v5-help" id="plHelp" hidden><summary>START 檢傷流程提示（練習模式才顯示）</summary>
           <ol><li>能行走 → 綠</li><li>不能行走：無呼吸（開氣道仍無）→ 黑；呼吸 &gt;30 次/分 → 紅</li><li>呼吸 ≤30：橈動脈摸不到或 CRT &gt;2 秒 → 紅</li><li>循環正常：無法遵從簡單指令 → 紅；能遵從 → 黃</li></ol></details>
-        <p class="hint">先在上方選好人員。檢傷請用任務「檢傷分類」（選人後持續進行，依序告知傷情）；搬運、解困要 2 人，照護、協助裝載 1 人，在傷患卡片上點。檢傷完成才能貼標。</p>
+        <p class="hint">先在上方選好人員。檢傷請用任務「檢傷分類」（選人後持續進行，依序告知傷情）；搬運、解困要 2 人，照護、協助裝載 1 人，在傷患卡片上點。檢傷完成才能貼標，貼標後才能後送。紅色單獨一車，黃色至多 1 人需躺臥才可共乘；後送會帶走 1 名隊員護送。</p>
         <div class="v5-chips" id="plChips"></div>
         <div class="v5-amb" id="plAmb"></div>
         <div class="v5-list" id="plist"></div>
@@ -476,8 +477,10 @@ input.bad{border-color:var(--red)!important;outline:2px solid var(--red)}
 /* ================= 共用設定 ================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrL1PyDgbnfsrLX9abdJHh5pPbULZWXXjz5P0N0nTrTtQq3AJuJkMhiyyqPWWyK1Er/exec';   // ← 貼上 GAS 網頁應用程式網址（https://script.google.com/macros/s/.../exec），留空則不上傳
 const AIR = 900, AIR_WARN = 300;
-const VERSION = '2026.10.16';
+const VERSION = '2026.10.17';
 const CHANGELOG = [
+  {v:'2026.10.17', items:['S005：選擇支援單位時，每個支援單位自帶一輛救護車；傷患清單把「未檢傷」與「未貼標」合併為同一類，避免誤點標籤後傷患消失。','S005：「傷患照護」改為「醫療處遇」（EMT-2 範圍：止血、氣道、給氧、固定、保暖等）；處遇要依傷情選擇，不對症白費時間，有害處遇會讓傷患惡化；脊椎、骨盆傷未固定就搬運會扣 hp。']},
+  {v:'2026.10.16b', items:['S005 調整：後送會帶走一名隊員隨車護送（救護車返回才歸隊）；檢傷輪到車內傷患而車身未穩固時，先跳出提醒讓你選擇；救護車載客規則（紅色單獨一車，黃色視傷情、至多一人需躺臥才可共乘，綠色只與綠色）；傷患人數增加為 15 人。']},
   {v:'2026.10.16', items:['新增情境 S005：遊覽車撞山壁大量傷病患（START 檢傷分類、兩人搬運、救護車後送取捨）。檢傷改為選人後依時間依序告知傷情；傷患人數調整為 10 人。']},
   {v:'2026.10.15', items:['開始畫面的模式改為點選方塊（練習／考核／挑戰）。',
     '結算畫面的「重新上傳」按鈕改為只在上傳失敗時才顯示。',
@@ -1515,13 +1518,13 @@ S004.tasks = [
 ];
 
 /* ================= 情境 S005：台9線遊覽車撞山壁大量傷病患 =================
-   【傷患模型】10 人（紅2、黃3、綠4、黑1；受困 2 人＝1 紅 1 黃）。每場由樣板隨機排列（誰是紅、誰在哪裡每場不同）。
+   【傷患模型】15 人（紅3、黃5、綠6、黑1；受困 2 人＝1 紅 1 黃）。每場由樣板隨機排列（誰是紅、誰在哪裡每場不同）。
    每位傷患只存「觀察屬性」（能否行走、有無呼吸與次數、橈動脈脈搏、CRT、能否遵從指令），真實分類一律由 start5()
    依 START 演算法算出；產生器另外對照設計分類做自我驗證（不符會在 console 報錯，M.verify5 留存結果）。
    【狀態】p.zone＝所在位置：scene 現場／green 綠色區／area 集結區／boarded 已上救護車待出發／transported 已後送；
           p.status＝'alive'｜'dead'（黑色一開始就是 dead）；p.tri＝檢傷完成時間；p.tag＝玩家貼的標籤（綠色引導會自動預貼）。
-   【惡化】紅 hp≈55 每秒 -0.09（有人照護 ×0.3）；黃 hp≈70 每秒 -0.02，滿 20 分鐘仍在現場且無人照護則加速為 -0.05；綠不惡化。
-   【人員動作】檢傷、解困、搬運、照護、裝載救護車都是「針對某位傷患」的動態任務（mkPT5），由傷患清單的按鈕觸發，
+   【惡化】紅 hp≈55 每秒 -0.09（有人處遇時 ×0.5，對症處遇再依項目降低，總倍率下限 0.2）；黃 hp≈70 每秒 -0.02，滿 20 分鐘仍在現場且無人照護則加速為 -0.05；綠不惡化。
+   【人員動作】檢傷分類是持續任務；解困、搬運、裝載救護車與醫療處遇是「針對某位傷患」的動態任務（mkPT5），由傷患清單的按鈕觸發，
    沿用「先點選人員再點任務」；交通管制、穩固車身、引導輕傷、啟動大量傷病患機制是一般任務。
    【救護車】現場 1 輛；啟動大量傷病患機制（或請求增援）後 480 秒到 1 輛救護車＋增援 3 人（單位 R），沒有第二波（共 2 輛）。
    每輛一次載 2 人（可混色），裝載 30 秒（1 名隊員協助，EMT 自帶不佔 crew），載滿自動出發，離場 1500 秒（25 分鐘）後返回。 */
@@ -1544,66 +1547,144 @@ const pick5 = arr => arr[Math.floor(Math.random()*arr.length)];
 /* 傷患樣板：rr 呼吸次數範圍、pulse 橈動脈、crt 可能的充填秒數、obey 能否遵從簡單指令 */
 const T5 = {
   R:[
-    {desc:'胸口被方向盤頂住，呼吸又急又淺，一句話只能說幾個字', rr:[34,40], pulse:true, crt:[1.5,2], obey:true},
-    {desc:'胸部重擊，嘴唇發紫、喘得很快', rr:[32,38], pulse:true, crt:[1.5,2], obey:true},
-    {desc:'大腿深部撕裂傷，血流不止、臉色蒼白冒冷汗', rr:[22,28], pulse:false, crt:[4,5], obey:true},
-    {desc:'腹部被座椅扶手重擊，肚子僵硬、皮膚濕冷', rr:[24,28], pulse:true, crt:[3,4], obey:true},
-    {desc:'頭部撞到窗框，叫不醒、只會呻吟', rr:[18,22], pulse:true, crt:[1.5,2], obey:false}],
-  YT:{desc:'前排座椅變形壓住雙腿無法脫身，但意識清楚', rr:[18,24], pulse:true, crt:[1,1.5,2], obey:true},
+    {desc:'胸口被方向盤頂住，呼吸又急又淺，一句話只能說幾個字', inj:['chest','airway'], rr:[34,40], pulse:true, crt:[1.5,2], obey:true},
+    {desc:'胸部重擊，嘴唇發紫、喘得很快', inj:['chest','airway'], rr:[32,38], pulse:true, crt:[1.5,2], obey:true},
+    {desc:'大腿深部撕裂傷，血流不止、臉色蒼白冒冷汗', inj:['bleed','shock','wound'], rr:[22,28], pulse:false, crt:[4,5], obey:true},
+    {desc:'腹部被座椅扶手重擊，肚子僵硬、皮膚濕冷', inj:['shock'], rr:[24,28], pulse:true, crt:[3,4], obey:true},
+    {desc:'頭部撞到窗框，叫不醒、只會呻吟', inj:['head','airway','spine'], rr:[18,22], pulse:true, crt:[1.5,2], obey:false}],
+  YT:{desc:'前排座椅變形壓住雙腿，雙腿麻木使不上力，意識清楚', lie:true, inj:['spine','leg'], rr:[18,24], pulse:true, crt:[1,1.5,2], obey:true},
+  /* lie＝隱藏屬性：是否需躺臥（擔架）。救護車只有 1 張擔架，兩位都需躺臥的黃色不能同車 */
   Y:[
-    {desc:'小腿閉鎖性骨折，無法站立但意識清楚'},
-    {desc:'骨盆疼痛，不敢移動'},
-    {desc:'鎖骨與肩膀骨折，坐著起不來'},
-    {desc:'腰背劇痛，無法站起'},
-    {desc:'前臂開放性骨折，已有人加壓包紮'},
-    {desc:'膝蓋嚴重扭傷腫脹，站不起來'}],
+    {desc:'腰背劇痛，一動就痛得叫出聲，不敢翻身', lie:true, inj:['spine']},
+    {desc:'骨盆疼痛，雙腿使不上力', lie:true, inj:['pelvis']},
+    {desc:'髖部劇痛，一腿明顯外旋、不能彎曲', lie:true, inj:['pelvis','leg']},
+    {desc:'膝蓋嚴重扭傷腫脹，站不起來，其他部位沒有傷', lie:false, inj:['limb','leg']},
+    {desc:'前臂開放性骨折，傷口持續滲血、前臂明顯變形，意識清楚', lie:false, inj:['limb','wound']},
+    {desc:'鎖骨與肩膀骨折，肩膀明顯變形、手臂不敢動，神情緊張但說話正常', lie:false, inj:['limb']}],
   G:['手肘擦挫傷','手腕扭傷','額頭小撕裂傷，已經止血','驚嚇哭泣，但行動自如','頸部僵硬，能自己走動','膝蓋瘀青',
      '手掌被玻璃割傷','肩膀痠痛','輕微頭暈，能自己走路','腳踝輕微扭傷，能一拐一拐走'],
   B:['倒臥地上動也不動，沒有呼吸、摸不到脈搏','被壓在座椅與行李架之間，沒有任何反應']
 };
 function attr5(cls,t){
-  const o={desc:t.desc||t};
+  const o={desc:t.desc||t, inj:(t.inj||[]).slice(), lie:cls==='Y'?!!t.lie:cls!=='G'};   /* lie：需躺臥；紅、黑一律躺臥，綠不用 */
   if(cls==='G') Object.assign(o,{walk:true,breath:true,rr:ri5(16,22),pulse:true,crt:1.5,obey:true});
   else if(cls==='B') Object.assign(o,{walk:false,breath:false,rr:0,pulse:false,crt:null,obey:false});
   else { const y=cls==='Y'&&!t.rr; Object.assign(o,{walk:false,breath:true,
       rr:y?ri5(16,24):ri5(t.rr[0],t.rr[1]), pulse:y?true:t.pulse, crt:y?pick5([1,1.5,2]):pick5(t.crt), obey:y?true:t.obey}); }
   return o;
 }
-/* 產生 10 位傷患並自我驗證（分布、受困 2 人＝1 紅 1 黃） */
+/* 產生 15 位傷患並自我驗證（分布、受困 2 人＝1 紅 1 黃） */
 function makePatients5(){
   const L=[], pk=(arr,n)=>shuffle(arr.slice()).slice(0,n);
   L.push({cls:'R',t:T5.R[0],loc:'trap',drv:true});
-  pk(T5.R.slice(1),1).forEach(t=>L.push({cls:'R',t}));
+  pk(T5.R.slice(1),2).forEach(t=>L.push({cls:'R',t}));
   L.push({cls:'Y',t:T5.YT,loc:'trap'});
-  pk(T5.Y,2).forEach(t=>L.push({cls:'Y',t}));
-  pk(T5.G,4).forEach(t=>L.push({cls:'G',t}));
+  pk(T5.Y,4).forEach(t=>L.push({cls:'Y',t}));
+  pk(T5.G,6).forEach(t=>L.push({cls:'G',t}));
   pk(T5.B,1).forEach(t=>L.push({cls:'B',t}));
-  /* 位置：不能行走又非受困（紅1、黃2、黑1＝4 人）2 人在車內、2 人在路邊；能行走 4 人，1 人還在車內、3 人已逃出 */
-  shuffle(L.filter(x=>!x.loc&&x.cls!=='G')).forEach((x,i)=>x.loc=i<2?'car':'road');
+  /* 位置：不能行走又非受困（紅2、黃4、黑1＝7 人）3 人在車內、4 人在路邊；能行走 6 人，1 人還在車內、5 人已逃出 */
+  shuffle(L.filter(x=>!x.loc&&x.cls!=='G')).forEach((x,i)=>x.loc=i<3?'car':'road');
   shuffle(L.filter(x=>x.cls==='G')).forEach((x,i)=>x.loc=i<1?'car':'out');
-  /* 駕駛固定是受困的紅色；其餘依序取名（導遊、乘客01～08）後隨機排列，所以每場誰是紅、誰在哪裡都不同 */
-  const names=['導遊',...Array.from({length:8},(_,i)=>'乘客'+String(i+1).padStart(2,'0'))];
+  /* 駕駛固定是受困的紅色；其餘依序取名（導遊、乘客01～13）後隨機排列，所以每場誰是紅、誰在哪裡都不同 */
+  const names=['導遊',...Array.from({length:13},(_,i)=>'乘客'+String(i+1).padStart(2,'0'))];
   const order=[L.find(x=>x.drv),...shuffle(L.filter(x=>!x.drv))];
   const pts=order.map((x,i)=>({id:'p'+String(i+1).padStart(2,'0'), name:x.drv?'駕駛':names.shift(), dcls:x.cls, loc:x.loc, ...attr5(x.cls,x.t),
       cls:null, status:x.cls==='B'?'dead':'alive', zone:'scene', tri:null, tag:null, tagBy:null, tagAt:null,
-      freed:x.loc!=='trap', known:true, deadAt:null, transAt:null, ambN:null, carriedAt:null, loadAmb:null,
+      tr:{}, trN:[], trMul:1, freed:x.loc!=='trap', known:true, deadAt:null, transAt:null, ambN:null, carriedAt:null, loadAmb:null,
       hp:x.cls==='R'?ri5(50,60):x.cls==='Y'?ri5(65,75):x.cls==='G'?100:0}));
   pts.forEach(p=>{ p.cls=start5(p); p.room=`${LOC5[p.loc]}｜${p.desc}`; });
-  /* 自我驗證：START 重算的分類要等於設計分類；分布 2/3/4/1；受困 2 人＝1 紅 1 黃 */
+  /* 自我驗證：START 重算的分類要等於設計分類；分布 3/5/6/1；受困 2 人＝1 紅 1 黃 */
   const cnt={R:0,Y:0,G:0,B:0}; let bad=0;
   pts.forEach(p=>{ cnt[p.cls]++; if(p.cls!==p.dcls) bad++; });
   const trap=pts.filter(p=>p.loc==='trap').map(p=>p.cls).sort().join('');
-  const ok=pts.length===10&&bad===0&&cnt.R===2&&cnt.Y===3&&cnt.G===4&&cnt.B===1&&trap==='RY';
+  const ok=pts.length===15&&bad===0&&cnt.R===3&&cnt.Y===5&&cnt.G===6&&cnt.B===1&&trap==='RY';
   M.verify5={ok,cnt,bad,trap,n:pts.length};
   if(!ok) console.error('S005 傷患分類驗證失敗',M.verify5);
   return pts;
 }
 const TRI_ORD5 = {out:0,road:1,car:2,trap:3};
-const nextTri5 = () => M.triQ.map(id=>P5(id)).find(p=>p.tri==null&&(p.zone==='scene'||p.zone==='green')&&!(p.status==='dead'&&p.deadAt!=null));
+const triCand5 = p => p.tri==null&&(p.zone==='scene'||p.zone==='green')&&!(p.status==='dead'&&p.deadAt!=null);
+const inside5 = p => p.loc==='car'||p.loc==='trap';
+/* 下一位可檢傷者：選了「先不進入」且車身未穩固時，車內傷患先略過 */
+const nextTri5 = () => M.triQ.map(id=>P5(id)).find(p=>triCand5(p)&&!(inside5(p)&&M.entryChoice==='wait'&&!M.stable));
+const anyTriCand5 = () => M.triQ.some(id=>triCand5(P5(id)));
+/* 要為車內傷患檢傷、車身尚未穩固：暫停時間，問玩家（同一場只問一次） */
+function askEntry5(){
+  M.entryChoice='asked';
+  choice('遊覽車尚未穩固','檢傷已經輪到車內的傷患，但遊覽車還沒有墊塊、支撐完成。進入車內可能讓車身位移，受困傷患的傷勢會加重，進入的隊員也有危險。要怎麼做？',[
+    {label:'直接進入車內檢傷', fn:()=>{ M.entryChoice='go'; M.ck.entryChoice='go'; log('帶隊官：不等穩固，直接進入車內檢傷。','cmd'); }},
+    {label:'先不進入，待車輛穩固後再進入', fn:()=>{ M.entryChoice='wait'; M.ck.entryChoice='wait'; log('帶隊官：先檢車外傷患，車輛穩固後再進入車內檢傷。','cmd'); }}]);
+}
 function doTri5(p){
   entry5(p); p.tri=S.t;
   const m=`檢傷 ${p.name}（${LOC5[p.loc]}）：${obs5(p)}。${p.desc}。`;
   log(m,'info'); toast(`${p.name}：${obs5(p)}`,3500);
+}
+/* ---------- 醫療處遇（EMT-2 作業範圍；不含 CPR／AED） ----------
+   helps＝對症的傷情；mul＝對症時乘上的惡化速度倍率（可疊加，總倍率有下限 P.trFloor）；heal＝對症時回復的 hp。
+   有害規則 HARM5：符合時扣 hp 並寫進 log／AAR；不對症也無害的處遇只是白費時間。 */
+const TR5 = {
+  pressure:{n:'控制出血：直接加壓', s:'加壓止血', dur:40, helps:['bleed'], mul:0.5, heal:4},
+  tourniquet:{n:'控制出血：止血帶', s:'止血帶', dur:45, helps:['bleed'], mul:0.45, heal:4},
+  dress:{n:'傷口包紮', s:'包紮', dur:30, helps:['wound','bleed'], mul:0.85, heal:2},
+  airway:{n:'氣道處置：擺位、口咽呼吸道、抽吸', s:'氣道處置', dur:45, helps:['airway','head'], mul:0.7, heal:3},
+  oxygen:{n:'給氧：面罩／鼻導管', s:'給氧', dur:30, helps:['airway','chest','shock'], mul:0.75, heal:3},
+  bvm:{n:'輔助呼吸：袋瓣面罩', s:'袋瓣面罩', dur:45, helps:['airway'], mul:0.7, heal:3},
+  warm:{n:'保暖', s:'保暖', dur:30, helps:['shock'], mul:0.85, heal:2},
+  legup:{n:'抗休克姿勢（抬腿）', s:'抬腿', dur:30, helps:['shock'], mul:0.8, heal:2},
+  splint:{n:'肢體骨折夾板固定', s:'夾板', dur:45, helps:['limb'], mul:0.9, heal:2},
+  collar:{n:'頸椎固定（頸圈）', s:'頸圈', dur:30, helps:['spine','head'], mul:0.85, heal:2},
+  board:{n:'脊椎固定（長背板）', s:'長背板', dur:60, helps:['spine'], mul:0.8, heal:2},
+  pelvic:{n:'骨盆固定（骨盆帶）', s:'骨盆固定', dur:60, helps:['pelvis'], mul:0.8, heal:2}
+};
+const HARM5 = [
+  {tr:'legup', dmg:8, when:p=>p.inj.some(x=>['head','chest','pelvis','spine','leg'].includes(x)), why:'抬腿會加重頭部傷的顱內壓與胸部傷的呼吸負擔，也會牽動骨盆、脊椎與下肢骨折，這類傷患不能做抗休克姿勢。'},
+  {tr:'tourniquet', dmg:6, when:p=>!p.inj.includes('bleed'), why:'沒有肢體大量出血就綁止血帶，會造成肢體缺血與劇痛，止血帶只用在加壓無效的大量出血。'},
+  {tr:'bvm', dmg:5, when:p=>!p.inj.includes('airway'), why:'呼吸沒有問題卻強制輔助呼吸，可能造成胃脹、嘔吐吸入與氣壓傷。'}
+];
+/* 搬運前尚未固定的傷情：搬運時扣 hp 一次（脊椎→長背板、骨盆→骨盆固定） */
+const FIXCARRY5 = [{inj:'spine',tr:'board',dmg:10,what:'疑似脊椎傷',why:'疑似脊椎傷未做脊椎固定（長背板）就搬運，搬運過程加重脊髓損傷風險。'},
+                   {inj:'pelvis',tr:'pelvic',dmg:10,what:'疑似骨盆骨折',why:'疑似骨盆骨折未做骨盆固定就搬運，搬運過程加重內出血。'}];
+const treatEmts5 = () => S.active.filter(a=>a.def.id==='treat');
+const treatAssigned5 = pid => treatEmts5().some(a=>a.pts&&a.pts.has(pid));
+/* 找一名可接手的處遇隊員：已經在顧這位傷患的優先，其次是名額未滿（最多同時顧 careMax 位）的 */
+const findEmt5 = p => treatEmts5().find(a=>a.pts.has(p.id))||treatEmts5().find(a=>a.pts.size<S005.P.careMax);
+function applyTreat5(p,k){
+  const T=TR5[k]; p.tr[k]=S.t;
+  const h=HARM5.find(x=>x.tr===k&&x.when(p));
+  if(h){
+    p.hp=Math.max(1,p.hp-h.dmg); p.trN.push({s:T.s,k:'harm'}); M.ck.harm.push({t:S.t,name:p.name,tr:T.n,why:h.why,dmg:h.dmg});
+    log(`${p.name}：${T.n}——有害處遇（hp −${h.dmg}）：${h.why}`,'alert'); return 'harm'; }
+  if(T.helps.some(x=>p.inj.includes(x))){
+    p.trMul=p.trMul*T.mul; p.hp=Math.min(100,p.hp+T.heal); p.trN.push({s:T.s,k:'ok'}); M.ck.helpful[p.id]=true; M.ck.nTreat++;
+    log(`${p.name}：完成${T.n}，情況穩定一些。`,'good'); return 'ok'; }
+  p.trN.push({s:T.s,k:'waste'}); M.ck.nTreat++; M.ck.waste++;
+  log(`${p.name}：${T.n}沒有明顯效果（白費了 ${T.dur} 秒）。`,'info'); return 'waste';
+}
+function treatAdd5(pid,k){
+  const p=P5(pid), a=findEmt5(p), why=why5('treat',p);
+  if(why!==true){ toast(`${p.name}：${why}`,4500); return false; }
+  if(p.tr[k]!=null){ toast(`${p.name}已做過「${TR5[k].n}」`); return false; }
+  if(a.q.some(x=>x.pid===pid&&x.tr===k)||(a.cur&&a.cur.pid===pid&&a.cur.tr===k)){ toast(`「${TR5[k].n}」已在排隊`); return false; }
+  a.q.push({pid,tr:k}); a.pts.add(pid);
+  log(`${p.name}：排入「${TR5[k].n}」（${names(a.crew)}，約 ${TR5[k].dur} 秒）。`,'info'); return true;
+}
+/* 每秒推進：一名隊員同一時間只做一項，顧兩位傷患時輪流處理；傷患離開（後送、死亡）就放掉名額與排隊 */
+function treatTick5(a){
+  const ck=M.ck;
+  for(const pid of [...a.pts]){ const p=P5(pid);
+    if(p.zone==='boarded'||p.zone==='transported'||p.status==='dead'){ a.pts.delete(pid); a.q=a.q.filter(x=>x.pid!==pid); if(a.cur&&a.cur.pid===pid) a.cur=null; } }
+  if(!a.cur&&a.q.length){
+    const i=a.q.findIndex(x=>x.pid!==a.lastP), it=a.q.splice(i>=0?i:0,1)[0];
+    a.cur={pid:it.pid,tr:it.tr,left:TR5[it.tr].dur}; entry5(P5(it.pid)); }
+  if(a.cur){ a.cur.left--; ck.careSec++; if(P5(a.cur.pid).cls==='R') ck.careRedSec++;
+    if(a.cur.left<=0){ const p=P5(a.cur.pid); applyTreat5(p,a.cur.tr); a.lastP=a.cur.pid; a.cur=null; } }
+}
+function carryHarm5(p){
+  FIXCARRY5.forEach(f=>{ if(!p.inj.includes(f.inj)) return;
+    const ok=p.tr[f.tr]!=null; M.ck.fixCarry.push({name:p.name,what:f.what,ok});
+    if(!ok&&!p['ch_'+f.inj]){ p['ch_'+f.inj]=1; p.hp=Math.max(1,p.hp-f.dmg); M.ck.harm.push({t:S.t,name:p.name,tr:'搬運',why:f.why,dmg:f.dmg});
+      log(`${p.name}：${f.why}（hp −${f.dmg}）`,'alert'); } });
 }
 const P5 = id => S.victims.find(p=>p.id===id);
 const knownDead5 = p => p.status==='dead' && (p.tri!=null || p.deadAt!=null);
@@ -1655,24 +1736,25 @@ const ambStage5 = n => { const i=Math.max(0,M.ambs.findIndex(a=>a.n===n)); retur
 
 const S005 = {
   id:'S005', tag:'大量傷病患', title:'台9線遊覽車撞山壁大量傷病患',
-  brief:'傍晚 17:50，台9線山區路段，一輛載有 10 人的遊覽車側撞山壁、車身傾斜卡在路肩，車內外都有傷病患：有人受困、有人自行逃出站在路邊、有人倒在地上。天色漸暗，後方彎道視線不佳。第一梯次出動水箱車 1 輛、救護車 1 輛。通報啟動大量傷病患機制後，救護車 1 輛與增援 3 人約 8 分鐘到場，沒有第二波，現場共 2 輛救護車；救護車後送後約 25 分鐘才返回；越晚啟動，救護車越晚到。',
-  arrival:n=>`第一梯次到場：水箱車1輛、救護車1輛，共 ${n} 人。遊覽車側撞山壁，車身傾斜，車內外傷病患很多，有人在路邊呼救，天色漸暗。`,
+  brief:'傍晚 17:50，台9線山區路段，一輛載有 15 人的遊覽車側撞山壁、車身傾斜卡在路肩，車內外都有傷病患：有人受困、有人自行逃出站在路邊、有人倒在地上。天色漸暗，後方彎道視線不佳。第一梯次出動水箱車 1 輛、救護車 1 輛。通報啟動大量傷病患機制後，增援 3 人與救護車 1 輛約 8 分鐘到場，沒有第二波；同時抵達的支援單位（開始前選擇）各自另帶救護車 1 輛；救護車後送後約 11 分鐘才返回，每趟還會帶走 1 名隊員護送；紅色傷患一車只能載 1 人。越晚啟動，救護車越晚到。',
+  arrival:n=>`第一梯次到場：水箱車1輛、救護車1輛，共 ${n} 人。遊覽車側撞山壁，車身傾斜，車內外傷病患很多，有人在路邊呼救，天色漸暗。${S.extra?`同時抵達的支援單位各自帶來救護車 1 輛，現場共 ${1+S.extra} 輛救護車。`:''}`,
+  extraNote:()=>`（各隊各自帶救護車 1 輛，現場共 ${1+S.extra} 輛）`,
   hint:'俯視圖：上方山壁、中間道路、下方集結區、右側救護車待命區',
   timeLimit:1800, amb:0, patients:true, noAmbGauge:true,
   zones:['現場管制','檢傷／後送'],
   victims:[],
-  P:{rR:0.09, careMul:0.3, rY:0.02, yLate:1200, rYLate:0.05,        // 惡化：紅每秒、照護倍率；黃每秒、20 分鐘後在現場無人照護的加速值
+  P:{rR:0.07, careMul:0.5, trFloor:0.2, rY:0.02, yLate:1200, rYLate:0.05,        // 惡化：紅每秒、照護倍率；黃每秒、20 分鐘後在現場無人照護的加速值
      tri:15, guide:60, stable:90, free:120, carry:90, load:30,                // 檢傷、引導輕傷、穩固車身、解困（每人）、搬運（單趟）、裝載救護車（秒）
-     ambAway:1500, ambWait:120, wave2Gap:420, wave1Amb:1, wave2Amb:0, careMax:2,             // 救護車離場秒數、裝載後等候逾時自動出發、第二波與第一波間隔、同時照護上限
+     ambAway:640, ambWait:120, wave2Gap:420, wave1Amb:1, wave2Amb:0, careMax:2,             // 救護車離場秒數、裝載後等候逾時自動出發、第二波與第一波間隔、同時照護上限
      riskAt:[240,480,720], riskP:0.3, breakDmg:15, entryDmg:10, hitVic:25},      // 未管制的來車風險（三次機會、各 30%）、未穩固就破壞的傷害、來車擦撞傷患的傷害
   init(){
     S.victims=makePatients5();
     S.amb=0;
     M.triQ=S.victims.slice().sort((a,b)=>TRI_ORD5[a.loc]-TRI_ORD5[b.loc]||(a.id<b.id?-1:1)).map(p=>p.id);   /* 本場固定的檢傷動線順序 */
-    Object.assign(M,{mci:null,traffic:false,stable:false,guided:false,wave2At:null,ambN:1,
-      ambs:[{n:1,st:'idle',load:[],pend:0,back:null,last:null,trips:0}],
-      ck:{triStart:null,triDone:null,mci:null,traffic:null,stable:null,entered:false,unstableEntry:false,breakUnstable:false,guided:null,carries:[],trips:[],
-          wasteCarryB:[],wasteRideB:[],greenRide:0,blind:[],careSec:0,careRedSec:0,crashCrew:0,crashVic:0,firstTri:null,firstCarry:null,firstLoad:null}});
+    Object.assign(M,{entryChoice:null,mci:null,traffic:false,stable:false,guided:false,wave2At:null,ambN:1+S.extra,
+      ambs:Array.from({length:1+S.extra},(_,i)=>({n:i+1,st:'idle',load:[],pend:0,back:null,last:null,trips:0,escort:null})),   /* 本隊 1 輛＋每個同時抵達的支援單位各自帶 1 輛 */
+      ck:{blocked:[],entryChoice:null,triStart:null,triDone:null,mci:null,traffic:null,stable:null,entered:false,unstableEntry:false,breakUnstable:false,guided:null,carries:[],trips:[],
+          wasteCarryB:[],wasteRideB:[],greenRide:0,blind:[],careSec:0,careRedSec:0,harm:[],helpful:{},nTreat:0,waste:0,fixCarry:[],crashCrew:0,crashVic:0,firstTri:null,firstCarry:null,firstLoad:null}});
   },
   onReinf(){
     /* 請求增援＝同時通報大量傷病患機制（救護車與增援人員從這一刻起算 480 秒） */
@@ -1686,11 +1768,11 @@ const S005 = {
     arrive(){ addCrew(['增援隊員1','增援隊員2','增援隊員3']);
       for(let i=0;i<S005.P.wave1Amb;i++) addAmb5();
       if(S005.P.wave2Amb>0) M.wave2At=S.t+S005.P.wave2Gap;   /* 預設沒有第二波 */
-      log('第一波到場：增援 3 人（增援單位）、救護車 1 輛（現場共 2 輛，沒有第二波）。','good'); }},
+      log(`第一波到場：增援 3 人（增援單位）、救護車 ${S005.P.wave1Amb} 輛（現場共 ${M.ambs.length} 輛${S005.P.wave2Amb>0?'，第二波約 '+Math.round(S005.P.wave2Gap/60)+' 分鐘後到':'，沒有第二波'}）。`,'good'); }},
   report:{deadline:150, fields:[
       {k:'type',label:'事故型態',opts:['遊覽車側撞山壁','遊覽車翻落邊坡','兩車對撞']},
       {k:'loc',label:'地點',opts:['台9線山區路段','台11線海岸路段','市區道路']},
-      {k:'pts',label:'傷病患約數',opts:['約 10 人（大量傷病患）','3 人以內','不明']},
+      {k:'pts',label:'傷病患約數',opts:['約 15 人（大量傷病患）','5 人以內','不明']},
       {k:'trap',label:'受困者',opts:['有人車內受困，需破壞解困','無人受困','不明']},
       {k:'haz',label:'現場危害',opts:['後方來車、車身不穩','無明顯危害','尚未評估']},
       {k:'need',label:'需要資源',opts:['啟動大量傷病患機制，多輛救護車與醫療資源','現有救護車即可','暫不需要增援']},
@@ -1699,18 +1781,18 @@ const S005 = {
       const e=[];
       if(d.type&&d.type!=='遊覽車側撞山壁') e.push('事故型態錯誤');
       if(d.loc&&d.loc!=='台9線山區路段') e.push('地點錯誤');
-      if(d.pts&&d.pts.startsWith('3')) e.push('傷病患約數低估');
+      if(d.pts&&d.pts.startsWith('5')) e.push('傷病患約數低估');
       if(d.trap==='無人受困') e.push('受困者回報錯誤');
       if(d.haz==='無明顯危害') e.push('現場危害回報錯誤');
       if(d.need&&!d.need.startsWith('啟動')) e.push('未回報需啟動大量傷病患機制');
       if(d.cp==='遊覽車與山壁之間') e.push('指揮站設在危險位置');
       return e;}},
   gauges(){
-    const t=tagN5(), un=S.victims.filter(p=>p.tri==null).length, pre=S.victims.filter(p=>p.tri==null&&p.tagBy==='auto').length;
+    const t=tagN5(), un=S.victims.filter(p=>p.tri==null).length, pre=S.victims.filter(p=>p.tri==null&&p.tagBy==='auto').length, nt=S.victims.filter(p=>p.tri!=null&&p.tag==null).length;
     const idle=M.ambs.filter(a=>a.st==='idle').length, away=M.ambs.filter(a=>a.st==='away').length;
     const gone=S.victims.filter(p=>p.zone==='transported').length;
     const g=[`貼標 <b style="color:#c8102e">紅${t.R}</b> <b style="color:#b77a00">黃${t.Y}</b> <b style="color:#23824f">綠${t.G}</b> <b>黑${t.B}</b>`,
-      `未檢傷 <b>${un}</b> 人${pre?`（含預貼綠標 ${pre}）`:''}`,
+      `待處理 <b>${un+nt}</b> 人（未檢傷 ${un}${pre?`，含預貼綠標 ${pre}`:''}／已檢傷未貼標 ${nt}）`,
       `大量傷病患機制 <b>${M.mci==null?'未啟動':'T+'+fmt(M.mci)+' 啟動'}</b>`,
       `救護車輛 <b>在場 ${idle}／離場 ${away}</b>`];
     if(M.wave2At!=null) g.push(`第二波救護車 <b>約 ${fmt(Math.max(0,M.wave2At-S.t))}</b>`);
@@ -1720,38 +1802,42 @@ const S005 = {
   tick(){
     const P=this.P, ck=M.ck;
     /* 第二波救護車 */
-    if(M.wave2At!=null&&S.t>=M.wave2At){ M.wave2At=null; for(let i=0;i<P.wave2Amb;i++) addAmb5(); log('第二波救護車 2 輛到場。','good'); }
+    if(M.wave2At!=null&&S.t>=M.wave2At){ M.wave2At=null; for(let i=0;i<P.wave2Amb;i++) addAmb5(); log(`第二波救護車 ${P.wave2Amb} 輛到場。`,'good'); }
     /* 救護車返回、裝載後等候逾時自動出發 */
     M.ambs.forEach(a=>{
-      if(a.st==='away'&&S.t>=a.back){ a.st='idle'; a.last=null; log(`救護車${a.n}返回現場待命。`,'radio'); }
+      if(a.st==='away'&&S.t>=a.back){ a.st='idle'; a.last=null; log(`救護車${a.n}返回現場待命。`,'radio');
+        if(a.escort!=null){ const c=crewById(a.escort); if(c){ c.gone=false; c.task=null; c.inside=false; c.note=''; c.escortAmb=null; log(`${c.name}隨救護車${a.n}返回，歸隊待命。`,'radio'); } a.escort=null; } }
       else if(a.st==='idle'&&a.load.length&&a.pend===0&&a.last!=null&&S.t-a.last>=P.ambWait) depart5(a,'等候逾時先行出發');
     });
     /* 未管制的來車風險：三次機會，各有一定機率 */
     if(!M.traffic&&P.riskAt.includes(S.t)&&(this.forceHit||Math.random()<P.riskP)) hazard5();
-    /* 照護：離開集結區（後送、死亡）就解除；統計照護秒數 */
-    S.active.filter(a=>a.def.kind==='care').forEach(a=>{
-      const p=P5(a.def.pid);
-      if(p.zone!=='area'||p.status==='dead'){ removeActive(a); log(`${p.name}${p.status==='dead'?'已無生命徵象':'已離開集結區'}，${names(a.crew)}結束照護回到待命。`,'info'); }
-      else { ck.careSec++; if(p.cls==='R') ck.careRedSec++; }
-    });
+    /* 醫療處遇：每名隊員一次一項，最多同時顧 2 位傷患 */
+    S.active.filter(a=>a.def.id==='treat').forEach(a=>treatTick5(a));
     /* 檢傷分類：每位執行人員每 P.tri 秒完成一位，多人速度倍增；全部檢完自動結束 */
     S.active.filter(a=>a.def.id==='tri').forEach(a=>{
       a.tp=(a.tp||0)+a.crew.length;
+      if(S.choiceOpen) return;
+      if(a.wait&&nextTri5()){ a.wait=false; log('車輛已穩固，檢傷分類繼續檢查車內傷患。','good'); toast('車輛已穩固，繼續檢查車內傷患',3000); }
       while(a.tp>=P.tri){
-        a.tp-=P.tri; const p=nextTri5();
-        if(!p){ break; }
-        doTri5(p);
+        const p=nextTri5(); if(!p) break;
+        if(inside5(p)&&!M.stable&&M.entryChoice==null){ askEntry5(); return; }
+        a.tp-=P.tri; doTri5(p);
       }
-      if(!nextTri5()){ removeActive(a); if(ck.triDone==null) ck.triDone=S.t; pushTip(`✓ 完成：${names(a.crew)}：檢傷分類（全部傷患已檢傷）`,'good'); log('檢傷分類完成：所有傷患都已檢傷。','good'); }
+      if(S.choiceOpen) return;
+      if(nextTri5()){
+        /* 還有人可檢，下一秒繼續 */
+      } else if(anyTriCand5()){
+        if(!a.wait){ a.wait=true; log('檢傷分類：車外傷患已檢完，等待車輛穩固後檢查車內傷患。','info'); toast('等待車輛穩固後檢查車內傷患',3500); }
+      } else { removeActive(a); if(ck.triDone==null) ck.triDone=S.t; pushTip(`✓ 完成：${names(a.crew)}：檢傷分類（全部傷患已檢傷）`,'good'); log('檢傷分類完成：所有傷患都已檢傷。','good'); }
     });
     /* 傷患惡化 */
     for(const p of S.victims){
       if(p.status!=='alive'||p.zone==='boarded'||p.zone==='transported') continue;
-      const cared=has('care:'+p.id);
+      const asg=treatAssigned5(p.id);
       let r=0;
       if(p.cls==='R') r=P.rR;
-      else if(p.cls==='Y') r=(S.t>P.yLate&&p.zone==='scene'&&!cared)?P.rYLate:P.rY;
-      if(cared) r*=P.careMul;
+      else if(p.cls==='Y') r=(S.t>P.yLate&&p.zone==='scene'&&!asg)?P.rYLate:P.rY;
+      r*=Math.max(P.trFloor,(asg?P.careMul:1)*p.trMul);
       p.hp-=r;
       if(p.hp<=0){ p.hp=0; p.status='dead'; p.deadAt=S.t; log(`${p.name}失去生命徵象（${CLS5[p.cls]}色傷患）。`,'alert'); }
     }
@@ -1816,21 +1902,29 @@ const S005 = {
     /* 紅色優先後送：每一組（紅、黃）都已後送的配對中，紅色先走的比例 ≥ 80% */
     const rT=R.filter(p=>p.transAt!=null), yT=Y.filter(p=>p.transAt!=null); let pairs=0, okp=0;
     rT.forEach(r=>yT.forEach(y=>{ pairs++; if(r.transAt<=y.transAt) okp++; }));
-    const trips=c.trips, full=trips.filter(x=>x.cnt>=2).length;
+    const trips=c.trips;
+    /* 後送效率：紅色單獨一車（規則強制）；黃色能共乘就要共乘（至多 1 人需躺臥）。黃色最少趟數＝躺臥者各一趟，坐姿者先配躺臥者、剩下的兩兩共乘 */
+    const ys=S.victims.filter(p=>p.zone==='transported'&&p.rideTag==='Y'), yl=ys.filter(p=>p.lie).length, yn=ys.length-yl;
+    const minY=yl+Math.ceil(Math.max(0,yn-yl)/2);
+    const yTrips=trips.filter(x=>x.ids.some(id=>P5(id).rideTag==='Y')).length, rTrips=trips.filter(x=>x.ids.some(id=>P5(id).rideTag==='R')).length;
     const wasteC=new Set(c.wasteCarryB), wasteR=new Set(c.wasteRideB);
     const pct=x=>Math.round(x*100)+'%';
     return [
       ['啟動大量傷病患機制（120秒內）', c.mci!=null&&c.mci<=120, ft(c.mci), '救護車與增援要等指揮中心調派，啟動越晚，救護車越晚到（增援約 8 分鐘到，救護車只有 1 輛）；沒有啟動就一直只有現場 1 輛救護車。'],
       ['交通管制（5分鐘內）', c.traffic!=null&&c.traffic<=300, ft(c.traffic)+(c.crashCrew||c.crashVic?`；後方來車衝入作業區（隊員受傷 ${c.crashCrew}、傷患加重 ${c.crashVic}）`:''), '山區彎道的後方來車是二次傷害的來源，傷患與擔架隊都暴露在車道旁。'],
-      ['車輛穩固後才進入或破壞', c.entered?!(c.unstableEntry||c.breakUnstable):null, !c.entered?'—':c.breakUnstable?'未穩固即破壞（車身位移，受困者傷勢加重）':c.unstableEntry?'未穩固即進入車內':'是', '車身傾斜卡在山壁邊，進入車內或破壞解困都可能讓車身位移，要先墊塊、支撐。'],
+      ['車輛穩固後才進入或破壞', c.entered?!(c.unstableEntry||c.breakUnstable):null, !c.entered?(c.entryChoice==='wait'?'選擇先不進入、等候穩固，但穩固前沒有進入車內':'—'):c.breakUnstable?'未穩固即破壞（車身位移，受困者傷勢加重）':c.unstableEntry?'未穩固即進入車內'+(c.entryChoice==='go'?'（檢傷時選了直接進入）':''):'是'+(c.entryChoice==='wait'?'（檢傷時選擇先不進入，穩固後才進入）':''), '車身傾斜卡在山壁邊，進入車內或破壞解困都可能讓車身位移，要先墊塊、支撐。檢傷輪到車內傷患而車身未穩固時，系統會先問；選「先不進入」，車內傷患要等穩固後才會被檢傷，一直不穩固就一直沒有檢傷。'],
       ['先完成初步檢傷再大量搬運', c.carries.length?(f4r>=1&&blind<=1):false, c.carries.length?`檢傷分類任務 ${ft(c.triStart)} 啟動、${ft(c.triDone)} 全部檢完；前 ${f4.length} 位被搬運者中紅色 ${f4r} 位；未檢傷就搬運 ${blind} 位`:`未搬運（檢傷分類 ${ft(c.triStart)} 啟動、${ft(c.triDone)} 檢完）`, '大量傷病患的人力有限，先派人做檢傷分類（START）才知道搬誰、先搬誰；盲目搬運常常搬到輕傷或已死亡者。以檢傷分類任務啟動與完成時間、前 3 位被搬運者含紅色、盲目搬運不超過 1 位為準。'],
       ['檢傷正確率 ≥ 80%', a.rate>=0.8, `${pct(a.rate)}（正確 ${a.correct} / ${a.total}；已貼標 ${a.tagged} 人、未貼標 ${a.total-a.tagged} 人）`+(a.over.length?`；黑色被標成紅色 ${a.over.length} 人（浪費資源）`:''), 'START：能行走→綠；不能行走→看呼吸（無呼吸開氣道仍無→黑，>30 次/分→紅）→看循環（橈動脈消失或 CRT >2 秒→紅）→看意識（無法遵從指令→紅，否則黃）。'],
       ['紅色傷患無低估', a.under.length===0&&a.untagR.length===0, a.under.length||a.untagR.length?`${a.under.length?`紅色被標成其他顏色：${a.under.map(p=>`${p.name}標${CLS5[p.tag]}`).join('、')}`:''}${a.untagR.length?`${a.under.length?'；':''}未貼標的紅色：${a.untagR.map(p=>p.name).join('、')}`:''}`:'無', '把紅色標成黃、綠（或黑）最危險：最危急的人會被排到最後甚至被放棄。寧可多標一級，也不要少標。'],
       ['紅色優先後送', trips.length?(yT.length===0?rT.length>0:okp/pairs>=0.8):false, trips.length?`紅色已後送 ${rT.length}/${R.length}，黃色 ${yT.length}/${Y.length}；紅先於黃的配對 ${okp}/${pairs}`:'未後送', '救護車有限時，最危急的紅色先走；黃色可以等，但不能讓救護車空等或先載輕傷。'],
       ['紅色傷患全數存活', rAlive===R.length, `存活 ${rAlive} / ${R.length}${R.filter(p=>p.status==='dead').length?`；不治：${R.filter(p=>p.status==='dead').map(p=>`${p.name}（T+${fmt(p.deadAt)}）`).join('、')}`:''}`, '紅色傷患約 10 分鐘內不處置就會死亡；搬運到集結區、專人照護、第一時間後送，才能全部救回。'],
       ['未浪費資源搬運／後送黑色傷患', wasteC.size===0&&wasteR.size===0, wasteC.size||wasteR.size?`搬運黑色 ${wasteC.size} 人、後送黑色 ${wasteR.size} 人`:'無', '黑色（無呼吸、開氣道仍無）不搬運、不後送，擔架人力和救護車床位留給還救得活的人。'],
-      ['救護車使用效率（每趟載滿 2 人）', trips.length?trips.length-full<=1:false, trips.length?`${full} / ${trips.length} 趟載滿${c.greenRide?`；載運綠色 ${c.greenRide} 人`:''}`:'未後送', '救護車一趟離場約 25 分鐘（現場只有 2 輛），載滿 2 人再走最有效率（人數為奇數時最後一趟可只載 1 人）；空車或載綠色傷患，等於浪費寶貴床位。'],
-      ['傷患結果摘要', null, `紅色存活 ${rAlive}/${R.length}；黃色已後送 ${yOut}/${Y.length}、存活 ${Y.filter(p=>p.status!=='dead').length}/${Y.length}；綠色已集結 ${pts.filter(p=>p.cls==='G'&&p.zone!=='scene').length}/${pts.filter(p=>p.cls==='G').length}；照護 ${c.careSec} 秒（其中紅色 ${c.careRedSec} 秒）`, '本情境只有 2 輛救護車、一趟離場約 25 分鐘，無法在 30 分鐘內送完所有黃色傷患，取捨的原則是紅色優先、黃色其次、綠色最後、黑色不動。'],
+      ['救護車使用效率（紅色單獨、黃色能共乘就共乘）', trips.length?yTrips<=minY:false, trips.length?`紅色 ${rTrips} 趟（單獨後送）；黃色 ${yTrips} 趟（${ys.length} 位黃色最少需 ${minY} 趟）${c.greenRide?`；載運綠色 ${c.greenRide} 人`:''}`:'未後送', `救護車一趟離場約 ${Math.round(P.ambAway/60)} 分鐘（現場共 ${M.ambs.length} 輛）。紅色單獨後送；黃色視傷情，至多一人需躺臥才可共乘（只有一張擔架）。能共乘卻分開走，就是浪費車趟。後送會帶走一名隊員隨車護送，人力要先規劃。`],
+      ['後送搭配被擋次數', null, c.blocked.length?`${c.blocked.length} 次：${c.blocked.slice(0,3).map(b=>`T+${fmt(b.t)} ${b.name}`).join('、')}${c.blocked.length>3?'…':''}`:'0 次', '紅色需獨佔擔架；兩位都需躺臥的黃色不能同車；不同顏色不能同車。被擋代表搭配前沒有先看清傷情（檢傷觀察與傷況描述就是判斷依據）。'],
+      ['紅色傷患至少有一項對症處遇', R.length?R.every(p=>c.helpful[p.id]):null, R.length?`${R.filter(p=>c.helpful[p.id]).length} / ${R.length} 位紅色有對症處遇${R.some(p=>!c.helpful[p.id])?'；沒有：'+R.filter(p=>!c.helpful[p.id]).map(p=>p.name).join('、'):''}`:'—', 'EMT-2 現場處遇原則：大量出血先止血、氣道與呼吸有問題先處理並給氧、休克要保暖、疑似骨折或脊椎傷要固定。看檢傷觀察與傷況描述就推得出該做什麼。'],
+      ['處遇無害（未做有害處遇）', c.nTreat||c.harm.length?c.harm.filter(x=>x.tr!=='搬運').length===0:null, c.harm.filter(x=>x.tr!=='搬運').length?c.harm.filter(x=>x.tr!=='搬運').map(x=>`${x.name}：${x.tr}（${x.why}）`).join('；'):(c.nTreat?`共 ${c.nTreat} 項處遇，無有害（白費 ${c.waste} 項）`:'未做處遇'), '不對症的處遇白費時間，有害的處遇（例如對頭胸部傷抬腿、沒大量出血就綁止血帶、呼吸正常卻強制輔助呼吸）會直接讓傷患惡化。'],
+      ['疑似脊椎／骨盆傷搬運前已固定', c.fixCarry.length?c.fixCarry.every(x=>x.ok):null, c.fixCarry.length?c.fixCarry.map(x=>`${x.name}（${x.what}）${x.ok?'已固定':'未固定即搬運'}`).join('、'):'本場沒有搬運這類傷患', '疑似脊椎傷要先頸圈加長背板、骨盆骨折要先骨盆帶，再搬運；未固定就搬運會扣 hp 一次。長背板與骨盆固定各需約 60 秒，要和紅色惡化取捨。'],
+      ['傷患結果摘要', null, `紅色存活 ${rAlive}/${R.length}；黃色已後送 ${yOut}/${Y.length}、存活 ${Y.filter(p=>p.status!=='dead').length}/${Y.length}；綠色已集結 ${pts.filter(p=>p.cls==='G'&&p.zone!=='scene').length}/${pts.filter(p=>p.cls==='G').length}；處遇 ${c.careSec} 秒（其中紅色 ${c.careRedSec} 秒）`, `本情境救護車只有 ${M.ambs.length} 輛、一趟離場約 ${Math.round(P.ambAway/60)} 分鐘、紅色一車一人、後送還會帶走隊員，無法在 30 分鐘內送完所有黃色傷患，取捨的原則是紅色優先、黃色其次、綠色最後、黑色不動。`],
     ];
   },
   card(){
@@ -1841,16 +1935,18 @@ const S005 = {
       <li><b>循環正常：看意識（M）。</b>無法遵從簡單指令 → <b style="color:#c8102e">紅色</b>；能遵從 → <b style="color:#b77a00">黃色（延後處置）</b>。</li></ol>
       <ul style="margin:0 0 10px;padding-left:20px;font-size:13.5px;line-height:1.6">
       <li>檢傷是選人後的持續任務，每人約 <b>15 秒</b>查一位，依動線依序告知傷情（不做完整處置）；先分類、再處置，搬運與後送依「紅→黃→綠」，黑色不動。</li>
-      <li>擔架搬運需要 <b>2 人</b>；救護車一趟載 2 人、來回約 25 分鐘，現場只有 2 輛，床位永遠不夠，要取捨（紅先、黃後）。</li></ul>
+      <li><b>EMT-2 現場處遇原則：</b>止血（大量出血先加壓或止血帶）、氣道與呼吸（擺位、抽吸、給氧）、休克（保暖）、固定（夾板、頸圈、長背板、骨盆帶）。不對症白費時間，有害處遇（如頭胸部傷抬腿）會讓傷患惡化；黑色不處遇。</li>
+      <li>擔架搬運需要 <b>2 人</b>；救護車來回約 ${Math.round(S005.P.ambAway/60)} 分鐘，現場只有 ${M.ambs.length} 輛，床位永遠不夠，要取捨（紅先、黃後）。</li>
+      <li><b>紅色單獨後送；黃色視傷情，至多一人需躺臥才可共乘</b>（救護車只有一張擔架）；綠色只與綠色同車。後送會帶走 1 名隊員隨車護送，救護車返回才歸隊，人力要先規劃。</li></ul>
       <p class="hint">本情境的傷患數據與時間為教學簡化模型，僅供演練判斷用。</p>`;
   },
   /* 傷患表格與上傳摘要 */
   stTxt(p){
     const res=p.zone==='transported'?`已後送（救護車${p.ambN}）`:p.zone==='boarded'?'已上車未出發':p.status==='dead'?(p.deadAt!=null?`不治（T+${fmt(p.deadAt)}）`:'無生命徵象')+(p.zone==='area'?'，遺體已搬至集結區':'，留置現場'):p.zone==='area'?'在集結區':p.zone==='green'?'在綠色區':'仍在現場';
-    return `真實${CLS5[p.cls]}／標${p.tag?CLS5[p.tag]:'無'}｜${res}`;
+    return `真實${CLS5[p.cls]}／標${p.tag?CLS5[p.tag]:'無'}｜${res}｜處遇：${p.trN.length?p.trN.map(x=>x.s+(x.k==='harm'?'（有害）':x.k==='waste'?'（無效）':'')).join('、'):'無'}`;
   },
   vPayload(){
-    const t=S.victims.filter(p=>p.cls==='R'||p.cls==='Y').map(p=>({name:`${p.name}（${CLS5[p.cls]}）`,status:`標${p.tag?CLS5[p.tag]:'無'}｜`+(p.zone==='transported'?'已後送':p.status==='dead'?'不治':p.zone==='area'?'在集結區':'仍在現場')}));
+    const t=S.victims.filter(p=>p.cls==='R'||p.cls==='Y').map(p=>({name:`${p.name}（${CLS5[p.cls]}）`,status:`標${p.tag?CLS5[p.tag]:'無'}｜處遇${p.trN.length}項｜`+(p.zone==='transported'?'已後送':p.status==='dead'?'不治':p.zone==='area'?'在集結區':'仍在現場')}));
     const g=S.victims.filter(p=>p.cls==='G'), b=S.victims.filter(p=>p.cls==='B');
     t.push({name:`綠色 ${g.length} 人`,status:`已集結 ${g.filter(p=>p.zone!=='scene').length} 人`}, {name:`黑色 ${b.length} 人`,status:`搬運 ${new Set(M.ck.wasteCarryB).size} 人、後送 ${new Set(M.ck.wasteRideB).size} 人`});
     return t;
@@ -1861,8 +1957,30 @@ const S005 = {
   },
 };
 
-function addAmb5(){ M.ambN++; M.ambs.push({n:M.ambN,st:'idle',load:[],pend:0,back:null,last:null,trips:0}); }
-const ambFree5 = () => M.ambs.filter(a=>a.st==='idle'&&a.load.length+a.pend<2);
+function addAmb5(){ M.ambN++; M.ambs.push({n:M.ambN,st:'idle',load:[],pend:0,back:null,last:null,trips:0,escort:null}); }
+/* 載客規則（以玩家貼的標籤為準；是否需躺臥看隱藏屬性 lie）：
+   紅色一車一人、不與任何人同車；黃色兩人同車至多 1 人需躺臥（只有 1 張擔架）；綠色只能與綠色（上限 2 人）；黑色不與其他顏色同車。 */
+function canRide5(a,p){
+  const ms=S.victims.filter(x=>x!==p&&(a.load.includes(x.id)||x.loadAmb===a.n));
+  if(ms.length>=2) return '這輛救護車已載滿';
+  const t=p.tag;
+  if(ms.length){
+    const m=ms[0], mt=m.rideTag;
+    if(t==='R') return '紅色傷患需獨佔擔架，不能與其他傷患同車';
+    if(mt==='R') return '這輛車已載紅色傷患，紅色需獨佔擔架，不能再載其他傷患';
+    if(mt!==t) return `${CLS5[mt]}色與${CLS5[t]}色傷患不能同車後送（紅色單獨、黃色視傷情共乘、綠色只與綠色）`;
+    if(t==='Y'&&m.lie&&p.lie) return `這兩位黃色傷患都需躺臥（${m.name}：${m.desc}；${p.name}：${p.desc}），救護車只有一張擔架，不能同車`;
+  }
+  return true;
+}
+function ambColor5(a){ const m=S.victims.find(p=>(a.load.includes(p.id)||p.loadAmb===a.n)&&p.rideTag); return m?m.rideTag:null; }
+const ambFree5 = p => M.ambs.filter(a=>a.st==='idle'&&(p?canRide5(a,p)===true:a.load.length+a.pend<2));
+/* 後送會帶走 1 名隊員隨車護送，救護車返回才歸隊 */
+function escort5(a,cid){
+  if(a.escort!=null) return;
+  const c=crewById(cid); if(!c||c.gone) return;
+  a.escort=cid; c.gone=true; c.task=null; c.inside=false; c.escortAmb=a.n; c.note=`護送待命：隨救護車${a.n}出發`;
+}
 function depart5(a,why){
   if(!a.load.length) return;
   const ids=a.load.slice(), P=S005.P;
@@ -1870,7 +1988,8 @@ function depart5(a,why){
   ids.forEach(id=>{ const p=P5(id); p.zone='transported'; p.transAt=S.t; p.ambN=a.n;
     if(p.cls==='B') M.ck.wasteRideB.push(p.id); if(p.cls==='G') M.ck.greenRide++; });
   M.ck.trips.push({n:a.n,t:S.t,ids,cnt:ids.length,why:why||''});
-  log(`救護車${a.n}載 ${ids.map(id=>P5(id).name).join('、')} 離場後送${why?'（'+why+'）':''}，約 ${P.ambAway/60} 分鐘後返回。`,'radio');
+  if(a.escort!=null){ const c=crewById(a.escort); if(c) c.note=`隨車護送，約 ${Math.round(P.ambAway/60)} 分鐘後返回`; }
+  log(`救護車${a.n}載 ${ids.map(id=>P5(id).name).join('、')} 離場後送${why?'（'+why+'）':''}，${a.escort!=null?crewById(a.escort).name+'隨車護送，':''}約 ${Math.round(P.ambAway/60)} 分鐘後返回。`,'radio');
 }
 /* 進入車內作業（檢傷、解困、搬運車內傷患）：記錄是否在車身穩固前 */
 function entry5(p){
@@ -1903,8 +2022,8 @@ function guide5(){
 }
 
 /* ---------- 針對某位傷患的動作（檢傷、解困、搬運、照護、裝載） ---------- */
-const pBusy5 = p => S.active.some(a=>a.def.pid===p.id&&a.def.kind!=='care');   /* 照護是長期任務，不擋其他處置（後送時照護人員自動解除） */
-const PK5 = {free:'解困',carry:'搬運',care:'照護',load:'後送'};
+const pBusy5 = p => S.active.some(a=>a.def.pid===p.id);
+const PK5 = {free:'解困',carry:'搬運',treat:'處遇',load:'後送'};
 /* 回傳 true 或不能做的原因（灰色按鈕點下去會說明） */
 function why5(kind,p){
   if(S.over) return '演練已結束';
@@ -1916,17 +2035,19 @@ function why5(kind,p){
     if(z==='area') return '已在集結區'; if(z==='green') return '已在綠色區';
     if(p.loc==='trap'&&!p.freed) return '受困中，需先破壞解困';
     return pBusy5(p)?'正在進行其他處置':true; }
-  if(kind==='care'){
-    if(z!=='area') return '需先搬運到集結區';
-    if(knownDead5(p)) return '已無生命徵象';
-    if(pBusy5(p)) return '這位傷患已有人處置';
-    if(has('care:'+p.id)) return '已有人照護';
-    if(S.active.filter(a=>a.def.kind==='care').length>=S005.P.careMax) return `最多同時照護 ${S005.P.careMax} 人`;
+  if(kind==='treat'){
+    if(p.tri==null) return '需先完成檢傷（要看到傷情才能處遇）';
+    if(p.cls==='B'||knownDead5(p)) return '黑色（無呼吸、開氣道仍無）或已無生命徵象者，大量傷病患不施行處遇（含 CPR／AED），人力留給救得活的人';
+    if(!treatEmts5().length) return '需先派一名隊員執行任務「醫療處遇」（每人最多同時顧 2 位傷患）';
+    if(!findEmt5(p)) return `處遇隊員都已顧滿 ${S005.P.careMax} 位傷患；傷患後送後才會放出名額，或再派一人執行「醫療處遇」`;
     return true; }
   if(kind==='load'){
     if(z!=='area'&&z!=='green') return '需先搬運到集結區（或引導到綠色區）';
     if(pBusy5(p)) return '這位傷患已有人處置';
-    if(!ambFree5().length) return M.ambs.some(a=>a.st==='idle')?'現場的救護車都已載滿':'現場沒有救護車（離場中，或尚未到場）';
+    if(!p.tag) return '尚未貼標，不能上救護車（先檢傷、貼標）';
+    const idl=M.ambs.filter(a=>a.st==='idle');
+    if(!idl.length) return '現場沒有救護車（離場中，或尚未到場）';
+    if(!ambFree5(p).length){ const rs=idl.map(a=>canRide5(a,p)).filter(x=>x!==true); return rs.find(x=>x!=='這輛救護車已載滿')||rs[0]; }
     return true; }
   return '不明動作';
 }
@@ -1939,47 +2060,64 @@ function mkPT5(kind,p,amb){
         log('車身未穩固就進行破壞，車體位移，受困者疼痛加劇、傷勢加重！','alert'); } },
     done:()=>{ p.freed=true; log(`${p.name}已解除受困，可以搬運。`,'good'); }};
   if(kind==='carry') return {...b,name:`擔架搬運：${p.name}`,min:2,max:2,dur:P.carry,
-    start:()=>{ markStart({id:'carry'}); entry5(p); const c=M.ck; if(c.firstCarry==null) c.firstCarry=S.t;
+    start:()=>{ markStart({id:'carry'}); entry5(p); carryHarm5(p); const c=M.ck; if(c.firstCarry==null) c.firstCarry=S.t;
       c.carries.push({id:p.id,t:S.t,cls:p.cls,tri:p.tri!=null});
       if(p.cls==='B'){ if(!c.wasteCarryB.includes(p.id)) c.wasteCarryB.push(p.id); log(`擔架隊接近${p.name}：沒有呼吸、沒有反應，搬運已是白費人力。`,'alert'); } },
     done:()=>{ p.zone='area'; p.carriedAt=S.t; log(`${p.name}已搬到集結區${p.tag?'（'+CLS5[p.tag]+'色區）':'（尚未貼標）'}。`); }};
-  if(kind==='care') return {...b,name:`傷患照護：${p.name}`,dur:null,
-    start:()=>{ markStart({id:'care'}); log(`${p.name}開始專人照護（惡化速度降低）。`,'good'); }};
   if(kind==='load') return {...b,name:`協助裝載：${p.name}→救護車${amb.n}`,dur:P.load,amb:amb.n,
-    start:()=>{ markStart({id:'load'}); if(M.ck.firstLoad==null) M.ck.firstLoad=S.t; amb.pend++; p.loadAmb=amb.n; },
-    cancel:()=>{ amb.pend=Math.max(0,amb.pend-1); p.loadAmb=null; },
-    done:()=>{
+    start:()=>{ markStart({id:'load'}); if(M.ck.firstLoad==null) M.ck.firstLoad=S.t; amb.pend++; p.loadAmb=amb.n; p.rideTag=p.tag; },
+    cancel:()=>{ amb.pend=Math.max(0,amb.pend-1); p.loadAmb=null; p.rideTag=null; },
+    done:a=>{
       amb.pend=Math.max(0,amb.pend-1); p.loadAmb=null;
-      if(amb.st!=='idle'){ log(`救護車${amb.n}已離場，${p.name}未能上車。`,'alert'); return; }
+      if(amb.st!=='idle'){ p.rideTag=null; log(`救護車${amb.n}已離場，${p.name}未能上車。`,'alert'); return; }
       p.zone='boarded'; p.ambN=amb.n; amb.load.push(p.id); amb.last=S.t;
       log(`${p.name}已上救護車${amb.n}（${amb.load.length}/2）。`);
-      if(amb.load.length>=2&&amb.pend===0) depart5(amb,'載滿出發'); }};
+      escort5(amb,a.crew[0]);
+      if(amb.pend===0&&(amb.load.length>=2||p.rideTag==='R')) depart5(amb,p.rideTag==='R'?'紅色單獨後送':'載滿出發'); }};
 }
 /* 傷患清單按鈕：先選好人員，再點動作 */
 function ptAct(kind,pid){
   if(!S||S.over||S.choiceOpen||!S.sc.patients) return;
   const p=P5(pid), r=why5(kind,p);
-  if(r!==true){ toast(`${p.name}：${r}`); return; }
+  if(r!==true){ if(kind==='load'&&/不能同車|獨佔|不能再載/.test(r)) M.ck.blocked.push({t:S.t,name:p.name,r}); toast(`${p.name}：${r}`,4500); return; }
   if(kind==='carry'&&p.walk){ toast(`${p.name}自己能走，不需要擔架（請用「引導能行走傷患」）`); return; }
+  if(kind==='treat'){ treatMenu5(p); return; }
   const def0=mkPT5(kind,p,kind==='load'?{n:'',pend:0}:null);   /* 先用暫時物件檢查人數；真正的救護車在下面才指定 */
   const ids=pickCrew(def0); if(!ids) return;
   if(kind==='load'){
-    const c=ambFree5().sort((a,b)=>(b.load.length+b.pend)-(a.load.length+a.pend));
-    const go=a=>{ if(why5('load',p)!==true||!ambFree5().includes(a)) return; launchTask(mkPT5('load',p,a),ids); };
-    if(c.length>1){ choice('指定救護車',`${p.name}要上哪一輛救護車？（一輛一次載 2 人，載滿自動出發）`,
-        c.map(a=>({label:`救護車${a.n}（已載 ${a.load.length+a.pend} / 2 人）`,fn:()=>go(a)}))); return; }
+    const c=ambFree5(p).sort((a,b)=>(b.load.length+b.pend)-(a.load.length+a.pend));
+    const go=a=>{ if(why5('load',p)!==true||!ambFree5(p).includes(a)) return; launchTask(mkPT5('load',p,a),ids); };
+    if(c.length>1){ choice('指定救護車',`${p.name}要上哪一輛救護車？（紅色單獨一車；黃色至多 1 人需躺臥才可共乘；裝載的隊員會隨車護送離場）`,
+        c.map(a=>({label:`救護車${a.n}（已載 ${a.load.length+a.pend} / 2 人${ambColor5(a)?'，'+CLS5[ambColor5(a)]+'色':''}）`,fn:()=>go(a)}))); return; }
     go(c[0]); return;
   }
   launchTask(def0,ids);
+}
+/* 處遇選單：全部列出、順序固定，不提示哪一項對症 */
+function treatMenu5(p){
+  choice(`${p.name}：要做哪一項處遇？`,`依檢傷觀察與傷況判斷。每項約 30～60 秒，由處遇隊員依序處理；不對症會白費時間，有害的處遇會讓傷患惡化。\n傷況：${p.desc}`,
+    [...Object.keys(TR5).map(k=>({label:`${TR5[k].n}（約 ${TR5[k].dur} 秒）${p.tr[k]!=null?'　✓已做':''}`,fn:()=>treatAdd5(p.id,k)})),{label:'取消',fn:()=>{}}]);
 }
 function tagAct(pid,tag){
   if(!S||S.over||S.choiceOpen) return;
   const p=P5(pid);
   if(p.zone==='transported'){ toast(`${p.name}已後送，不能再改標籤`); return; }
   if(p.tri==null&&!p.autoTag){ toast('需先完成檢傷才能貼標'); return; }
-  p.tag= p.tag===tag?null:tag; p.tagBy=p.tag?'player':null; p.tagAt=S.t;
-  if(p.tag) log(`${p.name}貼${CLS5[p.tag]}標。`,'info'); else log(`${p.name}撕下標籤。`,'info');
-  render();
+  if(p.tag===tag){ toast(`${p.name}已經是${CLS5[tag]}標（要取消請按「清除」）`); return; }   /* 同色再點不取消，避免誤觸 */
+  const old=p.tag; p.tag=tag; p.tagBy='player'; p.tagAt=S.t;
+  log(`${p.name}標籤：${old?CLS5[old]+'→':''}${CLS5[tag]}。`,'info');
+  window.__quiet=true; render(); window.__quiet=false;
+  toast(`${p.name} 標籤：${old?CLS5[old]:'未貼標'}→${CLS5[tag]}${plPass(plFilter,p)?'':'；已移至「'+plCat5(p)+'」'}`,3500);
+}
+function clearTag5(pid){
+  if(!S||S.over||S.choiceOpen) return;
+  const p=P5(pid);
+  if(!p.tag){ toast(`${p.name}目前沒有標籤`); return; }
+  if(p.zone==='transported'){ toast(`${p.name}已後送，不能再改標籤`); return; }
+  const old=p.tag; p.tag=null; p.tagBy=null; p.tagAt=S.t;
+  log(`${p.name}清除標籤（原：${CLS5[old]}）。`,'info');
+  window.__quiet=true; render(); window.__quiet=false;
+  toast(`${p.name} 標籤：${CLS5[old]}→未貼標${plPass(plFilter,p)?'':'；已移至「'+plCat5(p)+'」'}`,3500);
 }
 function departBtn5(n){
   const a=M.ambs.find(x=>x.n===n); if(!S||S.over||S.choiceOpen||!a) return;
@@ -2001,7 +2139,9 @@ S005.tasks = [
    avail:()=>M.stable?'已完成':true,
    done:()=>{ M.stable=true; M.ck.stable=S.t; log('遊覽車以墊塊與支撐穩固完成。'); }},
   {id:'tri', zone:'檢傷／後送', multi:true, name:'檢傷分類', min:1,max:6, dur:null, desc:'持續：每人每 15 秒檢查一位，依動線（路邊→車內可移出→車內受困）依序告知傷情；多人速度倍增',
-   avail:()=>nextTri5()?true:'已完成', start:()=>{ if(M.ck.triStart==null) M.ck.triStart=S.t; }},
+   avail:()=>anyTriCand5()?true:'已完成', start:()=>{ if(M.ck.triStart==null) M.ck.triStart=S.t; }},
+  {id:'treat', zone:'檢傷／後送', multi:true, name:'醫療處遇（EMT）', min:1,max:1, dur:null, desc:'持續：1 名隊員最多同時顧 2 位傷患，依序執行你在傷患清單選的處遇（止血、氣道、給氧、固定、保暖…）',
+   avail:()=>true, start:a=>{ a.pts=new Set(); a.q=[]; a.cur=null; a.lastP=null; if(M.ck.treatStart==null) M.ck.treatStart=S.t; }},
   {id:'guide', zone:'檢傷／後送', name:'引導能行走傷患至綠色區', min:1,max:1, dur:60, desc:'廣播「能走的人到綠色區」，預貼綠標；仍需檢傷確認',
    avail:()=>M.guided?'已完成':true, done:guide5},
 ];
@@ -2009,25 +2149,29 @@ S005.tasks = [
 /* ---------- S005 傷患清單（可收合的面板，每位傷患一張卡；只在 S005 顯示） ----------
    卡片建好後只更新文字與樣式（不重建 DOM），避免每秒重繪吃掉點擊。 */
 let plFilter='all', plOpen=true;
-const PLF = [['all','全部'],['untri','未檢傷'],['R','紅標'],['Y','黃標'],['G','綠標'],['B','黑標'],['area','集結區'],['gone','已後送／死亡']];
+/* 傷患目前所屬的分類名稱（給「已移至…」提示用） */
+const plCat5 = p => p.zone==='transported'||p.zone==='boarded'||knownDead5(p)?'已後送／死亡':(p.tri==null||p.tag==null)?'待處理（未檢傷／未貼標）':CLS5[p.tag]+'標';
+let plPrev={};
+const PLF = [['all','全部'],['todo','待處理（未檢傷／未貼標）'],['R','紅標'],['Y','黃標'],['G','綠標'],['B','黑標'],['area','集結區'],['gone','已後送／死亡']];
 function plPass(f,p){
   if(f==='all') return true;
-  if(f==='untri') return p.tri==null;
+  if(f==='todo') return p.tri==null||p.tag==null;   /* 未檢傷與「已檢傷未貼標」同一類，取消標籤也不會讓傷患消失 */
   if(f==='area') return p.zone==='area'||p.zone==='green';
   if(f==='gone') return p.zone==='transported'||p.zone==='boarded'||knownDead5(p);
   return p.tag===f;
 }
 function buildPL(){
   const on=!!S.sc.patients; $('#plPanel').hidden=!on; if(!on) return;
-  plFilter='all';
+  plFilter='all'; plPrev={};
   $('#plHelp').hidden=S.mode!=='practice';
   $('#plChips').innerHTML=PLF.map(f=>`<button type="button" class="v5-chip" data-chip="${f[0]}">${f[1]}<span></span></button>`).join('');
   $('#plAmb').dataset.sig='';
   $('#plist').innerHTML=S.victims.map(p=>`<div class="v5" data-id="${p.id}" data-tag="">
     <div class="v5-h"><b>${p.name}</b><span class="v5-loc">${LOC5[p.loc]}</span><span class="v5-tgs"></span></div>
     <div class="v5-st"></div><div class="v5-obs"></div>
-    <div class="v5-tags" role="group" aria-label="${p.name}貼標">${['R','Y','G','B'].map(c=>`<button type="button" class="v5t" data-tag="${c}" aria-label="貼${CLS5[c]}標">${CLS5[c]}</button>`).join('')}</div>
-    <div class="v5-acts">${['free','carry','care','load'].map(k=>`<button type="button" class="v5b" data-k="${k}">${PK5[k]}</button>`).join('')}</div></div>`).join('');
+    <div class="v5-tr"></div>
+    <div class="v5-tags" role="group" aria-label="${p.name}貼標">${['R','Y','G','B'].map(c=>`<button type="button" class="v5t" data-tag="${c}" aria-label="貼${CLS5[c]}標">${CLS5[c]}</button>`).join('')}<button type="button" class="v5t clr" data-clr="1" aria-label="清除標籤">清除</button></div>
+    <div class="v5-acts">${['free','carry','treat','load'].map(k=>`<button type="button" class="v5b" data-k="${k}">${PK5[k]}</button>`).join('')}</div></div>`).join('');
   setPlOpen(plOpen);
 }
 function setPlOpen(on){
@@ -2037,35 +2181,38 @@ function updatePL(){
   if(!S||!S.sc.patients) return;
   const panel=$('#plPanel'); if(panel.hidden) return;
   const pts=S.victims;
-  $('#plSum').textContent=`共 ${pts.length} 人｜未檢傷 ${pts.filter(p=>p.tri==null).length}`;
+  $('#plSum').textContent=`共 ${pts.length} 人｜待處理 ${pts.filter(p=>p.tri==null||p.tag==null).length}`;
   if(!plOpen) return;
   document.querySelectorAll('#plChips .v5-chip').forEach(b=>{
     const f=b.dataset.chip; b.classList.toggle('on',f===plFilter); b.setAttribute('aria-pressed',f===plFilter);
     b.querySelector('span').textContent=' '+pts.filter(p=>plPass(f,p)).length; });
   /* 救護車列：內容有變才重寫（避免吃掉「出發」按鈕的點擊） */
   const ah=M.ambs.map(a=> a.st==='idle'
-    ? `<div class="v5-ab"><b>救護車${a.n}</b><span>在場待命｜已載 ${a.load.length}/2${a.pend?`（裝載中 ${a.pend}）`:''}${a.load.length&&a.last!=null?`｜等候 ${Math.max(0,S005.P.ambWait-(S.t-a.last))} 秒後自動出發`:''}</span>${a.load.length&&!a.pend?`<button type="button" class="v5b" data-dep="${a.n}">提早出發</button>`:''}</div>`
-    : `<div class="v5-ab"><b>救護車${a.n}</b><span>後送中｜${fmt(Math.max(0,a.back-S.t))} 後返回</span></div>`).join('');
+    ? `<div class="v5-ab"><b>救護車${a.n}</b><span>在場待命｜已載 ${a.load.length}/2${a.pend?`（裝載中 ${a.pend}）`:''}${ambColor5(a)?`｜${CLS5[ambColor5(a)]}色`:''}${a.escort!=null?`｜護送人員：${crewById(a.escort).name}`:''}${a.load.length&&a.last!=null?`｜等候 ${Math.max(0,S005.P.ambWait-(S.t-a.last))} 秒後自動出發`:''}</span>${a.load.length&&!a.pend?`<button type="button" class="v5b" data-dep="${a.n}">提早出發</button>`:''}</div>`
+    : `<div class="v5-ab"><b>救護車${a.n}</b><span>後送中｜${fmt(Math.max(0,a.back-S.t))} 後返回${a.escort!=null?`｜護送人員：${crewById(a.escort).name}（隨車）`:''}</span></div>`).join('');
   const am=$('#plAmb'); if(am.dataset.sig!==ah){ am.dataset.sig=ah; am.innerHTML=ah; }
   const box=$('#plist');
+  const lost=[]; pts.forEach(p=>{ const now=plPass(plFilter,p); if(plPrev[p.id]&&!now&&plFilter!=='all') lost.push(p); plPrev[p.id]=now; });
+  if(lost.length&&!window.__quiet) toast(`${lost.slice(0,3).map(p=>p.name).join('、')}${lost.length>3?'等 '+lost.length+' 位':''}已移至「${plCat5(lost[0])}」（切到「全部」可看到所有人）`,3500);
   pts.forEach(p=>{
     const el=box.querySelector(`[data-id="${p.id}"]`); if(!el) return;
     const show=plPass(plFilter,p); el.style.display=show?'':'none'; if(!show) return;
-    const a=S.active.find(x=>x.def.pid===p.id&&x.def.kind!=='care')||S.active.find(x=>x.def.pid===p.id);
+    const a=S.active.find(x=>x.def.pid===p.id);
     const zt= p.zone==='transported'?`已後送（救護車${p.ambN}）` : p.zone==='boarded'?`已上救護車${p.ambN}，等待出發` : p.zone==='area'?'在集結區' : p.zone==='green'?'在綠色區' : '在現場';
     const dt= knownDead5(p)?(p.deadAt!=null?`死亡（T+${fmt(p.deadAt)}）｜`:'無生命徵象｜'):'';
     el.querySelector('.v5-st').textContent= dt+zt+(p.tri!=null?'｜已檢傷':'｜未檢傷')+(a?`｜進行中：${a.def.name}${a.total!=null?`（剩 ${a.left} 秒）`:''}`:'');
     el.querySelector('.v5-obs').textContent= p.tri!=null?`${obs5(p)}\n${p.desc}`:(p.autoTag?'尚未檢傷（引導時預貼綠標）':'尚未檢傷：請派人做「檢傷分類」任務');
+    const em=treatEmts5().find(e=>e.pts&&e.pts.has(p.id)), qn=em?em.q.filter(x=>x.pid===p.id).length:0, cur=em&&em.cur&&em.cur.pid===p.id?em.cur:null;
+    el.querySelector('.v5-tr').textContent=(p.trN.length?'處遇：'+p.trN.map(x=>x.s+(x.k==='harm'?'（有害）':x.k==='waste'?'（無效）':'')).join('、'):'')+(cur?`${p.trN.length?'｜':''}進行中：${TR5[cur.tr].n}（剩 ${cur.left} 秒）`:'')+(qn?`｜排隊 ${qn} 項`:'')+(em&&!cur&&!qn&&!p.trN.length?'處遇隊員已指派':'');
     el.dataset.tag=p.tag||'';
-    const tg=el.querySelector('.v5-tgs'); tg.textContent=p.tag?`標：${CLS5[p.tag]}`:'未貼標'; tg.style.color=p.tag?TAGC5[p.tag]:'';
+    const tg=el.querySelector('.v5-tgs'); tg.textContent=p.tag?`標：${CLS5[p.tag]}${p.tri==null?'（未檢傷）':''}`:(p.tri==null?'未檢傷':'已檢傷・未貼標'); tg.style.color=p.tag?TAGC5[p.tag]:'#b00020';
     const canTag=(p.tri!=null||p.autoTag)&&p.zone!=='transported';
-    el.querySelectorAll('.v5t').forEach(b=>{ b.classList.toggle('on',p.tag===b.dataset.tag); b.classList.toggle('na',!canTag); });
+    el.querySelectorAll('.v5t').forEach(b=>{ if(b.dataset.clr){ b.classList.toggle('na',!p.tag||p.zone==='transported'); return; } b.classList.toggle('on',p.tag===b.dataset.tag); b.classList.toggle('na',!canTag); });
     const vis={free:p.loc==='trap'&&!p.freed&&p.zone==='scene',
-      carry:p.zone==='scene'&&p.loc!=='out'&&!(p.tri!=null&&p.walk), care:p.zone==='area', load:p.zone==='area'||p.zone==='green'};
+      carry:p.zone==='scene'&&p.loc!=='out'&&!(p.tri!=null&&p.walk), treat:['scene','green','area'].includes(p.zone)&&p.tri!=null, load:p.zone==='area'||p.zone==='green'};
     el.querySelectorAll('.v5b').forEach(b=>{
       const k=b.dataset.k; b.style.display=vis[k]?'':'none'; if(!vis[k]) return;
       const r=why5(k,p); b.classList.toggle('na',r!==true); b.title=r===true?'':r;
-      if(k==='care') b.textContent= has('care:'+p.id)?'照護中':'照護';
     });
   });
 }
@@ -2075,10 +2222,10 @@ $('#plPanel').addEventListener('click',e=>{
   if(b.dataset.chip){ plFilter=b.dataset.chip; updatePL(); return; }
   if(b.dataset.dep){ departBtn5(+b.dataset.dep); return; }
   const card=b.closest('.v5'); if(!card) return;
-  if(b.dataset.tag) tagAct(card.dataset.id,b.dataset.tag);
+  if(b.dataset.clr) clearTag5(card.dataset.id);
+  else if(b.dataset.tag) tagAct(card.dataset.id,b.dataset.tag);
   else if(b.dataset.k) ptAct(b.dataset.k,card.dataset.id);
 });
-
 const SC = {S001, S002, S003, S004, S005};
 
 /* ================= 挑戰模式（先想後選＋誘餌處置） =================
@@ -2217,7 +2364,7 @@ const PLANS = {
   S005:{
     pool:[
       {id:'mci',    s:'啟動大量傷病患', text:'馬上向指揮中心報告「大量傷病患」，請他們調更多救護車和醫療資源', right:true, task:'mci',
-       why:'救護車與增援都要等指揮中心調派，啟動越晚越晚到（增援約 8 分鐘到，救護車只有 1 輛）；沒有啟動就一直只有現場 1 輛救護車（目標 2 分鐘內）。'},
+       why:'救護車與增援都要等指揮中心調派，啟動越晚越晚到（增援約 8 分鐘到，救護車增派 1 輛）；沒有啟動就一直只有現場 1 輛救護車（目標 2 分鐘內）。'},
       {id:'report', s:'初期報告',   text:'向指揮中心說明現場狀況：大概幾個人受傷、在哪裡、有什麼危險、需要什麼', right:true, task:'report',
        why:'初報讓指揮中心和醫院掌握傷患數量與需求，也逼自己整理判斷。'},
       {id:'traffic',s:'交通管制',   text:'派人把後方來車擋住，保護路上作業的人和傷患', right:true, task:'traffic',
@@ -2228,12 +2375,18 @@ const PLANS = {
        why:'先分類才知道搬誰、先搬誰；每位約 15 秒的快速判斷（多派人會更快），不做完整處置。'},
       {id:'guide',  s:'引導輕傷',   text:'用廣播請能自己走的人先到旁邊的綠色區集合', right:true, task:'guide',
        why:'能行走者一律先歸綠色，一次集合起來，省下大量檢傷與搬運人力。'},
-      {id:'carryR', s:'先搬紅色',   text:'最危急的紅色傷患先用擔架搬到集結區，再派人守著照顧', right:true, task:'carry',
-       why:'紅色約 10 分鐘內不處置就會死亡；擔架要 2 人，搬運與照護的人力要先給紅色。'},
-      {id:'ambR',   s:'紅色先送醫', text:'救護車來了先載最危急的人，一車載滿 2 個再走', right:true, task:'load',
-       why:'救護車一趟離場約 25 分鐘、現場只有 2 輛，床位有限時紅色先走、載滿再走最有效率。'},
+      {id:'carryR', s:'先搬紅色',   text:'最危急的紅色傷患先用擔架搬到集結區（疑似脊椎或骨盆受傷的先固定好再搬）', right:true, task:'carry',
+       why:'紅色約 10 分鐘內不處置就會死亡；擔架要 2 人，搬運的人力要先給紅色；脊椎、骨盆傷未固定就搬會加重傷勢。'},
+      {id:'treat', s:'醫療處遇', text:'派一個人專門做現場急救：止血、清氣道、給氧、固定骨折，一個人最多顧兩位', right:true, task:'treat',
+       why:'EMT-2 現場處遇可明顯減緩惡化：大量出血先止血、呼吸有問題給氧與氣道處置、休克保暖、骨折與脊椎傷固定；不對症白費時間，有害處遇會讓傷患惡化。'},
+      {id:'ambR',   s:'紅色先送醫', text:'救護車來了先載最危急的紅色傷患，紅色一個人一輛車；黃色看傷情可以兩人共乘', right:true, task:'load',
+       why:'救護車一趟離場約 11 分鐘、現場救護車有限，床位有限時紅色先走；紅色需獨佔擔架，黃色至多 1 人需躺臥才可共乘，後送還會帶走一名隊員。'},
       {id:'reinf',  s:'請求增援',   text:'跟指揮中心要更多人手來幫忙搬運、照護', right:true, task:'reinf',
        why:'3–6 人的第一梯次不可能同時檢傷、搬運、照護；增援人員與救護車一起到，越早請求越好。'},
+      {id:'xo2',    s:'一律抬腿給氧', text:'每個傷患都先抬高雙腿、再戴上氧氣面罩，一視同仁', right:false, task:'blanketAll',
+       why:'抬腿只適用單純休克；頭部、胸部、骨盆、脊椎與下肢骨折的傷患抬腿會加重傷勢，處遇要依傷情選擇。'},
+      {id:'xtq',    s:'流血都綁止血帶', text:'只要看到流血，就一律綁上止血帶，比較保險', right:false, task:'tqAll',
+       why:'止血帶只用在加壓無效的肢體大量出血；一般傷口亂綁會造成肢體缺血與劇痛。'},
       {id:'xlight', s:'先搬輕傷',   text:'先把看起來清醒、會喊痛的傷患抬到安全的地方', right:false, task:'carryG',
        why:'輕傷傷患多半能自己走（綠色），擔架與人力要留給紅、黃色；先搬輕傷等於把最危急的人往後排。'},
       {id:'xblack', s:'黑色先送',   text:'把完全沒反應的人先送上救護車去醫院', right:false, task:'blackFirst',
@@ -2243,7 +2396,7 @@ const PLANS = {
       {id:'xdetail',s:'輕傷逐一處置',text:'每個輕傷傷患都好好包紮處理，不要讓任何人痛', right:false, task:'detailG',
        why:'大量傷病患時輕傷只做最簡單處置，詳細包紮要等紅、黃色處理完；人力先顧最危急的人。'},
     ],
-    key:['mci','report','traffic','stable','tri','carryR','ambR','reinf']},
+    key:['mci','report','traffic','stable','tri','carryR','treat','ambR','reinf']},
 };
 
 const DECOYS = {
@@ -2349,20 +2502,21 @@ const DECOYS = {
      gate:()=>!ambFree5().length?'現場沒有可上車的救護車':!S.victims.some(p=>p.cls==='B'&&p.zone!=='transported'&&p.zone!=='boarded'&&p.tri!=null)?'尚未檢傷發現沒有反應的傷患':true,
      why:'黑色（無呼吸、開氣道仍無）已無生命徵象，救護車床位和後送人力要留給救得活的紅、黃色。',
      eff:'一個救護車床位被黑色傷患佔用（「未浪費資源後送黑色傷患」未通過）；佔用 1 人 30 秒',
-     fin:()=>{
+     fin:x=>{
        const a=ambFree5()[0], p=S.victims.find(x=>x.cls==='B'&&x.zone!=='transported'&&x.zone!=='boarded'&&x.tri!=null);
        if(!a||!p){ log('沒有可上車的救護車或傷患，這 30 秒白費了。','alert'); return; }
-       p.zone='boarded'; p.ambN=a.n; a.load.push(p.id); a.last=S.t;
+       p.zone='boarded'; p.ambN=a.n; p.rideTag='B'; a.load.push(p.id); a.last=S.t; escort5(a,x.crew[0]);
        log(`${p.name}（無生命徵象）被送上救護車${a.n}，佔掉一個寶貴的床位！`,'alert');
        if(a.load.length>=2&&a.pend===0) depart5(a,'載滿出發'); }},
     {id:'allHosp', zone:'檢傷／後送', name:'救護車先載現場傷患到最近醫院', min:1,max:1, dur:30, desc:'不用等分類，有車就先走',
      gate:()=>M.ambs.some(a=>a.st==='idle'&&a.load.length+a.pend===0)?true:'現場沒有空的救護車',
      why:'沒先檢傷分類就送醫，載走的不一定是最危急的人，床位被輕傷或已死亡者佔用，紅色反而被留在現場。',
-     eff:'一輛空救護車載走 2 位「尚未檢傷」的傷患（隨機）並離場 25 分鐘',
-     fin:()=>{
+     eff:'一輛空救護車載走 2 位「尚未檢傷」的傷患（隨機）並離場 11 分鐘',
+     fin:x=>{
        const a=M.ambs.find(x=>x.st==='idle'&&x.load.length+x.pend===0), c=shuffle(S.victims.filter(p=>p.zone==='scene'&&p.tri==null)).slice(0,2);
        if(!a||!c.length){ log('沒有空的救護車或未檢傷的傷患，這 30 秒白費了。','alert'); return; }
-       c.forEach(p=>{ p.zone='boarded'; p.ambN=a.n; a.load.push(p.id); });
+       c.forEach(p=>{ p.zone='boarded'; p.ambN=a.n; p.rideTag=p.tag||'U'; a.load.push(p.id); });
+       escort5(a,x.crew[0]);
        log(`未經檢傷就把 ${c.map(p=>p.name).join('、')} 裝上救護車${a.n}，不一定是最需要的人！`,'alert');
        depart5(a,'未檢傷即出發'); }},
     {id:'detailG', zone:'檢傷／後送', name:'對綠色區傷患逐一包紮處置', min:1,max:2, dur:120, desc:'每位輕傷傷患都好好處理',
@@ -2370,6 +2524,18 @@ const DECOYS = {
      why:'大量傷病患時輕傷只做最簡單處置（綠標），詳細包紮要等紅、黃色處理完；人力先顧最危急的人。',
      eff:'佔用 1–2 人 120 秒，期間紅色傷患無人處置；沒有任何救命效果',
      fin:a=>{ log(`${names(a.crew)}把綠色區傷患逐一包紮完，花了 ${a.total} 秒，但紅、黃色傷患這段時間無人處置。`,'alert'); }},
+    {id:'blanketAll', zone:'檢傷／後送', name:'集結區傷患一律抬腿並給氧', min:1,max:2, dur:90, desc:'對所有已檢傷的傷患做抗休克姿勢加給氧',
+     gate:()=>S.victims.some(p=>p.tri!=null&&p.cls!=='B'&&p.zone!=='transported'&&p.zone!=='boarded')?true:'尚無已檢傷的傷患',
+     why:'抬腿只適用單純休克；頭部、胸部、骨盆、脊椎與下肢骨折的傷患抬腿會加重傷勢，處遇要依傷情選擇。',
+     eff:'對所有已檢傷的傷患同時做抬腿與給氧：符合有害規則者扣 hp（計入「處遇無害」未通過）；佔用 1–2 人 90 秒',
+     fin:()=>{ let n=0; S.victims.filter(p=>p.tri!=null&&p.cls!=='B'&&p.zone!=='transported'&&p.zone!=='boarded'&&p.status==='alive').forEach(p=>{ if(p.tr.legup==null){ applyTreat5(p,'legup'); n++; } if(p.tr.oxygen==null) applyTreat5(p,'oxygen'); });
+       log(`一律抬腿給氧：處理了 ${n} 位傷患，頭胸部、骨盆、脊椎、下肢傷的傷患被抬腿而惡化。`,'alert'); }},
+    {id:'tqAll', zone:'檢傷／後送', name:'流血傷口一律綁止血帶', min:1,max:2, dur:60, desc:'看到出血就上止血帶',
+     gate:()=>S.victims.some(p=>p.tri!=null&&p.cls!=='B'&&p.zone!=='transported'&&p.zone!=='boarded')?true:'尚無已檢傷的傷患',
+     why:'止血帶只用在加壓無效的肢體大量出血；一般傷口亂綁會造成肢體缺血與劇痛。',
+     eff:'對所有已檢傷、有傷口的傷患上止血帶：沒有大量出血者扣 hp（計入「處遇無害」未通過）；佔用 1–2 人 60 秒',
+     fin:()=>{ let n=0; S.victims.filter(p=>p.tri!=null&&p.cls!=='B'&&p.inj.some(x=>['bleed','wound'].includes(x))&&p.zone!=='transported'&&p.zone!=='boarded'&&p.status==='alive').forEach(p=>{ if(p.tr.tourniquet==null){ applyTreat5(p,'tourniquet'); n++; } });
+       log(`一律綁止血帶：處理了 ${n} 位有傷口的傷患，沒有大量出血的人肢體缺血、疼痛加劇。`,'alert'); }},
   ],
 };
 
@@ -2719,7 +2885,7 @@ function renderCrew(){
     const d=box.querySelector(`[data-id="${c.id}"]`); const a=c.task?S.active.find(x=>x.key===c.task):null;
     d.classList.toggle('sel',selected.has(c.id)); d.classList.toggle('busy',!!a&&!c.gone);
     d.classList.toggle('inside',c.inside&&!c.gone); d.classList.toggle('gone',c.gone);
-    d.querySelector('.cst').textContent=c.gone?c.note:a?`${a.def.name}${a.total!=null?'，剩 '+a.left+' 秒':''}`:'待命';
+    d.querySelector('.cst').textContent=c.gone?c.note:a?`${a.def.name}${a.total!=null?'，剩 '+a.left+' 秒':''}${a.wait?'（等待車輛穩固）':''}`:'待命';
     const air=d.querySelector('.air'), bar=air.firstElementChild;
     air.style.display=c.inside&&!c.gone?'block':'none';
     bar.style.width=(c.air/AIR*100)+'%'; bar.style.background=c.air<=AIR_WARN?'var(--red)':'var(--ok)';
@@ -2768,7 +2934,7 @@ function updateTasks(){
     if(ra){
       b.style.display=''; b.classList.add('running'); b.classList.remove('na','urgent');
       b.classList.toggle('cont',ra.total==null);
-      b.querySelector('.run').textContent=ra.total==null?`${names(ra.crew)}　持續執行中`:`${names(ra.crew)}　剩 ${ra.left} 秒`;
+      b.querySelector('.run').textContent=ra.wait?`${names(ra.crew)}　等待車輛穩固後檢查車內傷患`:ra.total==null?`${names(ra.crew)}　持續執行中`:`${names(ra.crew)}　剩 ${ra.left} 秒`;
       b.querySelector('.prog i').style.width=ra.total==null?'100%':((1-ra.left/ra.total)*100).toFixed(1)+'%';
       vis[t.zone]=1; run[t.zone]=(run[t.zone]||0)+1; return;
     }
@@ -3082,7 +3248,7 @@ function startGame(scId,n,mode,extra,sizes){
   document.title=`${S.sc.title}｜消防指揮情境訓練`;
   ['#start','#aar','#report','#choice','#plan','#feedSheet','#imgSheet'].forEach(id=>$(id).classList.remove('show'));
   log(S.sc.arrival(n),'radio');
-  if(extra) log(`同時抵達：${['A','B'].slice(0,extra).map(u=>u+'隊（'+sizes[u]+'人）').join('、')}。各單位不併組作業。`,'radio');
+  if(extra) log(`同時抵達：${['A','B'].slice(0,extra).map(u=>u+'隊（'+sizes[u]+'人）').join('、')}。各單位不併組作業。${S.sc.extraNote?S.sc.extraNote():''}`,'radio');
   render(); setSpeed(1);
   if(S.chal) openPlan();   /* 挑戰模式：先擬定計畫，確認後才呼叫 onStart、時間才開始流動 */
   else if(S.sc.onStart) S.sc.onStart();
